@@ -190,6 +190,12 @@ def main():
     job_queue.run_daily(job_journal_reminder, time=time(hour=h, minute=m), name="journal")
     print(f"  📝 Journal reminder: {h:02d}:{m:02d}")
 
+    # Journal second reminder (more urgent)
+    from config import JOURNAL_REMINDER_TIME_2
+    h2, m2 = JOURNAL_REMINDER_TIME_2
+    job_queue.run_daily(job_journal_reminder, time=time(hour=h2, minute=m2), name="journal_2")
+    print(f"  📝 Journal reminder 2: {h2:02d}:{m2:02d}")
+
     # Daily summary
     h, m = SUMMARY_TIME
     job_queue.run_daily(job_daily_summary, time=time(hour=h, minute=m), name="summary")

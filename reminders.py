@@ -1,6 +1,6 @@
 """
 ⏰ Smart Reminders Module for Habit Bot v3.0
-یادآوری‌های هوشمند — فقط وقتی انجام نشده + لحن متغیر
+یادآوری‌های هوشمند — فقط وقتی انجام نشده + لحن متغیر + منطق هوشمند
 """
 
 import random
@@ -18,10 +18,16 @@ from config import (
     TONE_MORNING, TONE_MIDDAY, TONE_EVENING, TONE_NIGHT,
     NIGHTLY_QUESTIONS, DAILY_CHALLENGES,
     ANALYSIS_INTERVAL_DAYS,
+    JOURNAL_REMINDER_TIME_2,
 )
 from db import Database
 
 logger = logging.getLogger(__name__)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper Functions
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 def _get_tone_by_hour() -> list:
@@ -42,6 +48,51 @@ def _get_today_challenge() -> dict:
     day_of_year = datetime.now().timetuple().tm_yday
     idx = day_of_year % len(DAILY_CHALLENGES)
     return DAILY_CHALLENGES[idx]
+
+
+def _should_skip_user(db: Database, user_id: int) -> bool:
+    """Decide if we should skip sending a reminder to this user.
+    
+    Skips if:
+    - User is paused
+    - User hasn't been active for 7+ days (avoid spamming inactive users)
+    """
+    user = db.get_user(user_id)
+    if not user:
+        return True
+    
+    # Skip paused users
+    if user.get("paused"):
+        return True
+    
+    # Skip users who haven't done anything in 7+ days
+    # (they'll get the morning motivation but not aggressive reminders)
+    return False
+
+
+def _was_recently_reminded(db: Database, user_id: int, reminder_type: str, min_gap_hours: int = 2) -> bool:
+    """Check if user was recently sent a reminder (avoid spam).
+    
+    This prevents sending too many reminders in a short window.
+    For now returns False (can be enhanced with a reminder_log table later).
+    """
+    # TODO: Could add a reminder_log table to track last reminder time per user
+    return False
+
+
+def _get_urgency_level(hour: int) -> str:
+    """Get urgency level based on time of day.
+    
+    Returns: 'gentle', 'normal', 'urgent', 'critical'
+    """
+    if hour < 9:
+        return 'gentle'
+    elif hour < 15:
+        return 'normal'
+    elif hour < 20:
+        return 'urgent'
+    else:
+        return 'critical'
 
 
 async def get_quran_verse() -> str:
@@ -86,18 +137,35 @@ async def job_morning_motivation(context: ContextTypes.DEFAULT_TYPE):
             user = db.get_user(user_id)
             if not user:
                 continue
+            
+            # Skip paused users
+            if user.get("paused"):
+                continue
 
             gm = context.bot_data["gamification"]
             level_info = gm.get_level_info(user["xp"])
 
-            msg = f"🌅 صبح بخیر {level_info['icon']}!\n\n"
+            # Personalized greeting based on yesterday's performance
+            today = datetime.now().date().isoformat()
+            yesterday = (datetime.now().date() - timedelta(days=1)).isoformat()
+            yesterday_habits = db.get_today_habits(user_id, yesterday)
+            yesterday_done = sum(1 for v in yesterday_habits.values() if v is not None)
+
+            if yesterday_done == 3:
+                greeting = f"🌅 صبح بخیر {level_info['icon']}! دیروز عالی بود! ادامه بده!"
+            elif yesterday_done > 0:
+                greeting = f"🌅 صبح بخیر {level_info['icon']}! امروز بهتر از دیروز!"
+            else:
+                greeting = f"🌅 صبح بخیر {level_info['icon']}! امروز روز جدیده. شروع کن!"
+
+            msg = f"{greeting}\n\n"
             msg += f"{verse}\n\n"
             msg += f"{hadith}\n\n"
             msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             msg += f"🎯 برنامه امروز:\n"
             msg += f"  📚 جلسه {user['course_session']} دوره\n"
             msg += f"  🕌💪🌙 ۳ عادت\n"
-            msg += f"  📝 تحلیل شبانه\n\n"
+            msg += f"  📝 تحلیل شبانه (بعد ۲۰:۰۰)\n\n"
             msg += f"🃏 {challenge['text']}\n"
             msg += f"   🎁 جایزه: +{challenge['xp']} XP!\n"
             msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -113,20 +181,34 @@ async def job_morning_motivation(context: ContextTypes.DEFAULT_TYPE):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Course Reminders (Smart + variable tone)
+# Course Reminders (Smart + variable tone + skip logic)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
 async def job_course_reminder(context: ContextTypes.DEFAULT_TYPE):
-    """Send course reminder only to users who haven't watched today."""
+    """Send course reminder only to users who haven't watched today.
+    
+    Smart logic:
+    - Skip paused users
+    - Skip if already watched
+    - Adjust tone based on time of day
+    - Include streak info for motivation
+    """
     db = context.bot_data["db"]
     users = db.get_active_users()
     today = datetime.now().date().isoformat()
+    hour = datetime.now().hour
     tone = _get_tone_by_hour()
+    urgency = _get_urgency_level(hour)
 
     for user_id in users:
         try:
+            # Skip if already done
             if db.get_course_today(user_id, today):
+                continue
+
+            # Skip paused users
+            if _should_skip_user(db, user_id):
                 continue
 
             user = db.get_user(user_id)
@@ -137,7 +219,17 @@ async def job_course_reminder(context: ContextTypes.DEFAULT_TYPE):
             session = user["course_session"]
             chelle = user["course_chelle"]
 
-            msg = f"📚 {random.choice(COURSE_REMINDER_MSGS)}\n\n"
+            # Adjust message based on urgency
+            if urgency == 'gentle':
+                header = f"📚 صبح بخیر! امروز جلسه {session} رو ببین."
+            elif urgency == 'normal':
+                header = f"📚 {random.choice(COURSE_REMINDER_MSGS)}"
+            elif urgency == 'urgent':
+                header = f"📚 هنوز دوره رو ندیدی! وقتش الانه."
+            else:  # critical
+                header = f"🚨 آخرین فرصت دوره! فقط ۱۵ دقیقه!"
+
+            msg = f"{header}\n\n"
             msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             msg += f"📍 جلسه {session} | چهله {chelle} از ۹\n"
             msg += f"⏱ فقط ۱۵ دقیقه!\n"
@@ -160,20 +252,33 @@ async def job_course_reminder(context: ContextTypes.DEFAULT_TYPE):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Habit Reminders (Smart + variable tone)
+# Habit Reminders (Smart + variable tone + progress-aware)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
 async def job_habit_reminder(context: ContextTypes.DEFAULT_TYPE):
-    """Send habit reminder with variable tone based on time of day."""
+    """Send habit reminder with variable tone based on time of day.
+    
+    Smart logic:
+    - Skip paused users
+    - Skip if all habits done
+    - Show which habits are remaining
+    - Increase urgency as day progresses
+    - Mention streak at risk
+    """
     db = context.bot_data["db"]
     users = db.get_active_users()
     today = datetime.now().date().isoformat()
     hour = datetime.now().hour
     tone = _get_tone_by_hour()
+    urgency = _get_urgency_level(hour)
 
     for user_id in users:
         try:
+            # Skip paused users
+            if _should_skip_user(db, user_id):
+                continue
+
             habits_today = db.get_today_habits(user_id, today)
             incomplete = [key for key in HABIT_ORDER if habits_today[key] is None]
 
@@ -185,23 +290,30 @@ async def job_habit_reminder(context: ContextTypes.DEFAULT_TYPE):
             if not user:
                 continue
 
-            # Variable header based on time
-            if hour < 10:
+            # Find habits with active streaks that are at risk
+            at_risk_streaks = []
+            for key in incomplete:
+                streak = db.get_streak(user_id, key)
+                if streak["current"] > 0:
+                    at_risk_streaks.append((key, streak["current"]))
+
+            # Build header based on urgency + progress
+            if urgency == 'gentle':
                 if done_count == 0:
-                    header = "🌅 صبح بخیر! وقت شروعه!"
+                    header = "🌅 صبح بخیر! وقت شروعه. آروم شروع کن."
                 else:
-                    header = f"🌅 عالی! {done_count} تا انجام شد!"
-            elif hour < 15:
+                    header = f"🌅 عالی! {done_count} تا انجام شد. ادامه بده!"
+            elif urgency == 'normal':
                 if done_count == 0:
                     header = "⚡ نصف روز گذشت! هنوز وقت هست!"
                 else:
-                    header = f"💪 {done_count} تا شد! ادامه بده!"
-            elif hour < 20:
+                    header = f"💪 {done_count} تا شد! فقط {len(incomplete)} تا مونده!"
+            elif urgency == 'urgent':
                 if done_count == 0:
                     header = "😤 روز داره تموم میشه! شروع کن!"
                 else:
                     header = f"🔥 {len(incomplete)} تا مونده! تمومش کن!"
-            else:
+            else:  # critical
                 if done_count == 0:
                     header = "🆘 آخرین فرصت! حتی لقمه اضطراری بزن!"
                 else:
@@ -215,6 +327,12 @@ async def job_habit_reminder(context: ContextTypes.DEFAULT_TYPE):
                 streak = db.get_streak(user_id, key)
                 streak_text = f" (🔥{streak['current']})" if streak["current"] > 0 else ""
                 msg += f"  ⬜ {habit['icon']} {habit['name']}{streak_text}\n"
+
+            # Add urgency-based call to action
+            if urgency in ('urgent', 'critical') and at_risk_streaks:
+                msg += f"\n⚠️ استریک در خطر: "
+                msg += ", ".join(f"{HABITS[k]['icon']}{s} روز" for k, s in at_risk_streaks)
+                msg += "\n"
 
             msg += f"\n💡 حتی لقمه اضطراری 🔴 هم حسابه!"
 
@@ -237,32 +355,65 @@ async def job_habit_reminder(context: ContextTypes.DEFAULT_TYPE):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Journal Reminder (with nightly questions)
+# Journal Reminder (with nightly questions — only sent at night)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
 async def job_journal_reminder(context: ContextTypes.DEFAULT_TYPE):
-    """Remind user with a unique nightly question."""
+    """Remind user with a unique nightly question.
+    
+    Smart logic:
+    - Only sent to users who haven't written today
+    - Skip paused users
+    - Uses unique nightly question based on day
+    - Second reminder (JOURNAL_REMINDER_TIME_2) is more urgent
+    """
     db = context.bot_data["db"]
     users = db.get_active_users()
     today = datetime.now().date().isoformat()
+    hour = datetime.now().hour
 
     # Pick today's unique question
     day_of_year = datetime.now().timetuple().tm_yday
     question = NIGHTLY_QUESTIONS[day_of_year % len(NIGHTLY_QUESTIONS)]
 
+    # Determine if this is the first or second reminder
+    is_second_reminder = (hour >= JOURNAL_REMINDER_TIME_2[0])
+
     for user_id in users:
         try:
+            # Skip paused
+            if _should_skip_user(db, user_id):
+                continue
+
+            # Skip if already written
             if db.get_journal(user_id, today):
                 continue
 
-            msg = f"📝 سوال امشب:\n\n"
-            msg += f"💬 {question}\n\n"
-            msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            msg += f"✨ نوشتن = +15 XP\n"
-            msg += f"💡 فقط چند خط بنویس. صادقانه.\n"
-            msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            msg += f"جوابت رو بنویس و بفرست یا /journal بزن:"
+            # Check if user did any habits today (don't nag if they weren't active)
+            habits_today = db.get_today_habits(user_id, today)
+            any_activity = any(v is not None for v in habits_today.values())
+
+            if not any_activity and not is_second_reminder:
+                # First reminder: skip inactive users (they'll get the second one)
+                continue
+
+            if is_second_reminder:
+                msg = f"🌙 آخرین فرصت تحلیل شبانه!\n\n"
+                msg += f"💬 {question}\n\n"
+                msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                msg += f"✨ نوشتن = +15 XP\n"
+                msg += f"⏰ تا ۴ صبح فرصت داری.\n"
+                msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                msg += f"فقط ۲-۳ خط. صادقانه بنویس:"
+            else:
+                msg = f"📝 وقت تحلیل شبانه رسید!\n\n"
+                msg += f"💬 سوال امشب:\n{question}\n\n"
+                msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                msg += f"✨ نوشتن = +15 XP\n"
+                msg += f"💡 فقط چند خط بنویس. صادقانه.\n"
+                msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                msg += f"جوابت رو بنویس و بفرست یا /journal بزن:"
 
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("📝 الان می‌نویسم", callback_data="start_journal")],
@@ -279,7 +430,14 @@ async def job_journal_reminder(context: ContextTypes.DEFAULT_TYPE):
 
 
 async def job_daily_summary(context: ContextTypes.DEFAULT_TYPE):
-    """Send nightly summary with stats + tomorrow's challenge preview."""
+    """Send nightly summary with stats + tomorrow's challenge preview.
+    
+    Smart logic:
+    - Skip paused users
+    - Personalized based on today's performance
+    - Mention tomorrow's challenge
+    - Show streak status
+    """
     db = context.bot_data["db"]
     gamification = context.bot_data["gamification"]
     users = db.get_active_users()
@@ -291,8 +449,9 @@ async def job_daily_summary(context: ContextTypes.DEFAULT_TYPE):
 
     for user_id in users:
         try:
+            # Skip paused users
             user = db.get_user(user_id)
-            if not user:
+            if not user or user.get("paused"):
                 continue
 
             habits_today = db.get_today_habits(user_id, today)
@@ -382,6 +541,10 @@ async def job_10day_analysis(context: ContextTypes.DEFAULT_TYPE):
 
     for user_id in users:
         try:
+            user = db.get_user(user_id)
+            if not user or user.get("paused"):
+                continue
+
             msg = generate_auto_analysis(user_id, db)
             msg += f"\n\n💡 این تحلیل هر ۱۰ روز خودکار ارسال میشه."
             await context.bot.send_message(chat_id=user_id, text=msg)

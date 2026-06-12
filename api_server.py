@@ -15,6 +15,7 @@ from config import (
     DAILY_DHIKR, DAILY_HADITHS, DUAS_BEFORE_HABIT,
     SHOP_ITEMS, SPIN_WHEEL_PRIZES, XP_WEEKLY_PERFECT, XP_WEEKLY_GOOD, XP_WEEKLY_OK,
     XP_COURSE_WATCHED, XP_JOURNAL_WRITTEN, MOOD_TAGS,
+    JOURNAL_START_HOUR, JOURNAL_END_HOUR, JOURNAL_NOT_ALLOWED_MSG,
 )
 from db import Database
 from gamification import Gamification
@@ -203,6 +204,16 @@ def create_api_app(db: Database, gm: Gamification) -> web.Application:
 
         if not user_id or not content:
             return web.json_response({"error": "user_id and content required"}, status=400)
+
+        # Check time restriction: journal only allowed between 20:00 and 04:00
+        current_hour = datetime.now().hour
+        if JOURNAL_END_HOUR <= current_hour < JOURNAL_START_HOUR:
+            return web.json_response({
+                "error": "time_restricted",
+                "message": JOURNAL_NOT_ALLOWED_MSG,
+                "allowed_start": JOURNAL_START_HOUR,
+                "allowed_end": JOURNAL_END_HOUR,
+            }, status=403)
 
         db.get_or_create_user(user_id)
         date = today_str()

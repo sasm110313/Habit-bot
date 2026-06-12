@@ -21,6 +21,7 @@ from config import (
     DAILY_CHALLENGES, XP_CHALLENGE_BONUS,
     JOURNEY_MILESTONES, NIGHTLY_QUESTIONS,
     COACH_TIPS, ANALYSIS_INTERVAL_DAYS,
+    JOURNAL_START_HOUR, JOURNAL_END_HOUR, JOURNAL_NOT_ALLOWED_MSG,
 )
 from datetime import timedelta
 from db import Database
@@ -36,6 +37,15 @@ logger = logging.getLogger(__name__)
 
 def today_str() -> str:
     return datetime.now().date().isoformat()
+
+
+def is_journal_allowed() -> bool:
+    """Check if current time is within journal allowed hours (20:00 - 04:00)."""
+    hour = datetime.now().hour
+    # Allowed: 20,21,22,23,0,1,2,3 (i.e. NOT between JOURNAL_END_HOUR and JOURNAL_START_HOUR)
+    if JOURNAL_END_HOUR <= hour < JOURNAL_START_HOUR:
+        return False
+    return True
 
 
 def main_keyboard() -> ReplyKeyboardMarkup:
@@ -856,6 +866,11 @@ async def show_journal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = _get_db(context)
     db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
 
+    # Check time restriction
+    if not is_journal_allowed():
+        await update.message.reply_text(JOURNAL_NOT_ALLOWED_MSG, reply_markup=main_keyboard())
+        return
+
     date = today_str()
     existing = db.get_journal(user_id, date)
 
@@ -1021,6 +1036,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
     if awaiting == "journal":
+        # Check time restriction before saving
+        if not is_journal_allowed():
+            context.user_data.pop("awaiting", None)
+            await update.message.reply_text(JOURNAL_NOT_ALLOWED_MSG, reply_markup=main_keyboard())
+            return
+
         # User is writing their journal
         db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
         date = today_str()
