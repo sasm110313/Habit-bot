@@ -56,6 +56,11 @@ from handlers import (
     show_journey_map,
     show_monthly_calendar,
     show_auto_analysis,
+    show_spin_wheel,
+    show_shop,
+    show_dhikr,
+    show_journal_archive,
+    pin_status,
     callback_handler,
     handle_text,
 )
@@ -127,6 +132,11 @@ def main():
     app.add_handler(CommandHandler("challenge", show_daily_challenge))
     app.add_handler(CommandHandler("journey", show_journey_map))
     app.add_handler(CommandHandler("calendar", show_monthly_calendar))
+    app.add_handler(CommandHandler("spin", show_spin_wheel))
+    app.add_handler(CommandHandler("shop", show_shop))
+    app.add_handler(CommandHandler("dhikr", show_dhikr))
+    app.add_handler(CommandHandler("archive", show_journal_archive))
+    app.add_handler(CommandHandler("pin", pin_status))
 
     # ── Callback Query Handler ───────────────────────────────────────────
     app.add_handler(CallbackQueryHandler(callback_handler))

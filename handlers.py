@@ -43,8 +43,11 @@ def main_keyboard() -> ReplyKeyboardMarkup:
         ["📋 وضعیت امروز", "📚 دوره"],
         ["🃏 چالش روز", "🗺️ نقشه سفر"],
         ["📊 آمار", "🏆 دستاوردها"],
-        ["📝 تحلیل", "🔥 استریک"],
-        ["📅 تقویم", "ℹ️ راهنما"],
+        ["📝 تحلیل", "📖 آرشیو"],
+        ["🔥 استریک", "📅 تقویم"],
+        ["🎰 چرخ شانس", "🏪 فروشگاه"],
+        ["📿 ذکر و دعا", "📌 پین وضعیت"],
+        ["ℹ️ راهنما"],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -422,6 +425,96 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer()
         return
 
+    # ── Spin Wheel ───────────────────────────────────────────────────────
+    if data == "spin_wheel":
+        from config import SPIN_WHEEL_PRIZES, XP_WEEKLY_PERFECT
+        import random as _rnd
+
+        stats = db.get_weekly_stats(user_id)
+        if stats["perfect_days"] < 7:
+            await query.answer("❌ هفته کامل نداشتی!")
+            return
+
+        weights = [p["weight"] for p in SPIN_WHEEL_PRIZES]
+        prize = _rnd.choices(SPIN_WHEEL_PRIZES, weights=weights, k=1)[0]
+
+        total_xp = prize["xp"] + XP_WEEKLY_PERFECT
+        db.add_xp(user_id, total_xp, f"چرخ شانس: {prize['name']} + هفتگی")
+
+        msg = f"🎰 چرخ می‌چرخه...\n\n"
+        msg += f"🎯 ← ← ← {prize['icon']} ← ← ←\n\n"
+        msg += f"🎉 {prize['name']}\n\n"
+        msg += f"✨ +{prize['xp']} XP (چرخ)\n"
+        msg += f"🏆 +{XP_WEEKLY_PERFECT} XP (هفته کامل)\n"
+        msg += f"━━━━━━━━━━━━━━━━━━\n"
+        msg += f"💰 مجموع: +{total_xp} XP!\n\n"
+        msg += f"{random.choice(MOTIVATIONAL_MSGS)}"
+
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("📋 برگشت", callback_data="show_today")]])
+        await query.edit_message_text(msg, reply_markup=keyboard)
+        await query.answer(f"🎉 +{total_xp} XP!")
+        return
+
+    # ── Weekly Reward ────────────────────────────────────────────────────
+    if data == "weekly_reward":
+        from config import XP_WEEKLY_PERFECT, XP_WEEKLY_GOOD, XP_WEEKLY_OK
+
+        stats = db.get_weekly_stats(user_id)
+        pd = stats["perfect_days"]
+
+        if pd >= 7:
+            xp_reward = XP_WEEKLY_PERFECT
+        elif pd >= 5:
+            xp_reward = XP_WEEKLY_GOOD
+        elif pd >= 3:
+            xp_reward = XP_WEEKLY_OK
+        else:
+            await query.answer("❌ حداقل ۳ روز کامل لازمه!")
+            return
+
+        db.add_xp(user_id, xp_reward, f"جایزه هفتگی ({pd} روز)")
+
+        msg = f"🎁 جایزه هفتگی!\n✨ +{xp_reward} XP ({pd} روز کامل)\n\n{random.choice(MOTIVATIONAL_MSGS)}"
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("📋 برگشت", callback_data="show_today")]])
+        await query.edit_message_text(msg, reply_markup=keyboard)
+        await query.answer(f"✨ +{xp_reward} XP!")
+        return
+
+    # ── Shop Buy ─────────────────────────────────────────────────────────
+    if data.startswith("buy_"):
+        from config import SHOP_ITEMS
+        item_id = data[4:]
+        item = next((i for i in SHOP_ITEMS if i["id"] == item_id), None)
+
+        if not item:
+            await query.answer("❌ پیدا نشد!")
+            return
+
+        user = db.get_user(user_id)
+        if not user or user["xp"] < item["cost"]:
+            await query.answer(f"❌ XP کافی نداری! ({item['cost']} لازمه)")
+            return
+
+        db.add_xp(user_id, -item["cost"], f"خرید: {item['name']}")
+        msg = f"🛍️ خرید موفق!\n\n✅ {item['name']}\n💰 -{item['cost']} XP\n\n{random.choice(MOTIVATIONAL_MSGS)}"
+        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("📋 برگشت", callback_data="show_today")]])
+        await query.edit_message_text(msg, reply_markup=keyboard)
+        await query.answer(f"✅ خریدی!")
+        return
+
+    # ── Mood Tag ─────────────────────────────────────────────────────────
+    if data.startswith("mood_"):
+        from config import MOOD_TAGS, XP_JOURNAL_WRITTEN
+        score = int(data[5:])
+        mood = next((m for m in MOOD_TAGS if m["score"] == score), None)
+        if mood:
+            context.user_data["journal_mood"] = score
+            context.user_data["awaiting"] = "journal"
+            msg = f"حالت: {mood['emoji']} {mood['label']}\n\nحالا تحلیلت رو بنویس و بفرست:"
+            await query.edit_message_text(msg)
+            await query.answer(f"{mood['emoji']}")
+        return
+
     # Fallback
     await query.answer("🤔")
 
@@ -756,26 +849,21 @@ async def show_journal(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg += f"برای ویرایش دوباره بنویس:"
     else:
         msg = f"📝 تحلیل شبانه — {date}\n\n"
-        msg += f"هرچی از دلت میاد بنویس:\n"
-        msg += f"• حالت چطور بود?\n"
-        msg += f"• چه چالشی داشتی?\n"
-        msg += f"• فردا چیکار کنی بهتره?\n"
-        msg += f"• از ۱ تا ۱۰ امروز چند بود?\n\n"
-        msg += f"✨ نوشتن = +{XP_JOURNAL_WRITTEN} XP\n\n"
-        msg += f"بنویس و بفرست:"
+        msg += f"اول حالتت رو انتخاب کن:\n"
 
-    # Show recent journals
-    recent = db.get_recent_journals(user_id, 5)
-    if recent and len(recent) > 1:
-        msg += f"\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        msg += f"📜 تحلیل‌های اخیر:\n"
-        for j in recent[:3]:
-            if j["date"] != date:
-                preview = j["content"][:40] + "..." if len(j["content"]) > 40 else j["content"]
-                msg += f"  {j['date']}: {preview}\n"
-
-    context.user_data["awaiting"] = "journal"
-    await update.message.reply_text(msg, reply_markup=main_keyboard())
+    # Show mood selection if not yet written
+    if not existing:
+        from config import MOOD_TAGS
+        keyboard = []
+        row = []
+        for m in MOOD_TAGS:
+            row.append(InlineKeyboardButton(f"{m['emoji']} {m['label']}", callback_data=f"mood_{m['score']}"))
+        keyboard.append(row)
+        keyboard.append([InlineKeyboardButton("⏭ بدون حالت — مستقیم بنویسم", callback_data="start_journal")])
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+    else:
+        context.user_data["awaiting"] = "journal"
+        await update.message.reply_text(msg, reply_markup=main_keyboard())
 
 
 async def cmd_journal(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -827,6 +915,8 @@ def _is_menu_button(text: str) -> bool:
         "📋 وضعیت امروز", "📚 دوره", "📊 آمار",
         "🏆 دستاوردها", "📝 تحلیل", "🔥 استریک", "ℹ️ راهنما",
         "🃏 چالش روز", "🗺️ نقشه سفر", "📅 تقویم",
+        "🎰 چرخ شانس", "🏪 فروشگاه", "📿 ذکر و دعا",
+        "📌 پین وضعیت", "📖 آرشیو",
     ]
     return text in menu_items
 
@@ -860,6 +950,16 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await show_journey_map(update, context)
         elif text == "📅 تقویم":
             await show_monthly_calendar(update, context)
+        elif text == "🎰 چرخ شانس":
+            await show_spin_wheel(update, context)
+        elif text == "🏪 فروشگاه":
+            await show_shop(update, context)
+        elif text == "📿 ذکر و دعا":
+            await show_dhikr(update, context)
+        elif text == "📌 پین وضعیت":
+            await pin_status(update, context)
+        elif text == "📖 آرشیو":
+            await show_journal_archive(update, context)
         elif text == "ℹ️ راهنما":
             await cmd_help(update, context)
         return
@@ -1312,4 +1412,237 @@ async def show_auto_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(msg, reply_markup=main_keyboard())
     except Exception as e:
         logger.error(f"show_auto_analysis error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🎰 Spin Wheel (چرخ شانس)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def show_spin_wheel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show spin wheel - available after a perfect week."""
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        gm = _get_gm(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+
+        from config import SPIN_WHEEL_PRIZES, XP_WEEKLY_PERFECT, XP_WEEKLY_GOOD, XP_WEEKLY_OK
+
+        stats = db.get_weekly_stats(user_id)
+        perfect_days = stats["perfect_days"]
+
+        msg = f"🎰 چرخ شانس هفتگی\n\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        msg += f"🏆 روزهای کامل این هفته: {perfect_days}/7\n\n"
+
+        if perfect_days >= 7:
+            msg += f"🎉 هفته کامل! می‌تونی بچرخونی!\n"
+            msg += f"🎁 جایزه هفته کامل: +{XP_WEEKLY_PERFECT} XP\n\n"
+            msg += f"جوایز چرخ:\n"
+            for prize in SPIN_WHEEL_PRIZES:
+                msg += f"  {prize['icon']} {prize['name']} (+{prize['xp']} XP)\n"
+
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🎰 بچرخون!", callback_data="spin_wheel")],
+            ])
+        elif perfect_days >= 5:
+            msg += f"👍 هفته خوبی بود! +{XP_WEEKLY_GOOD} XP\n"
+            msg += f"💡 ۷ روز کامل = چرخ شانس!\n"
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🎁 دریافت جایزه هفتگی", callback_data="weekly_reward")],
+            ])
+        elif perfect_days >= 3:
+            msg += f"🙂 بد نبود! +{XP_WEEKLY_OK} XP\n"
+            msg += f"💡 ۷ روز کامل = چرخ شانس!\n"
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🎁 دریافت جایزه هفتگی", callback_data="weekly_reward")],
+            ])
+        else:
+            msg += f"😅 این هفته باید بیشتر تلاش کنی!\n"
+            msg += f"💡 حداقل ۳ روز کامل = جایزه!\n"
+            msg += f"💡 ۷ روز کامل = چرخ شانس! 🎰\n"
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("📋 برگشت", callback_data="show_today")],
+            ])
+
+        msg += f"\n━━━━━━━━━━━━━━━━━━━━━━━━"
+        await update.message.reply_text(msg, reply_markup=keyboard)
+    except Exception as e:
+        logger.error(f"show_spin_wheel error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🏪 Shop (فروشگاه)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def show_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show the XP shop."""
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        gm = _get_gm(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+
+        from config import SHOP_ITEMS
+
+        user = db.get_user(user_id)
+        current_xp = user["xp"] if user else 0
+
+        msg = f"🏪 فروشگاه\n\n"
+        msg += f"💰 XP فعلی: {current_xp}\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+
+        keyboard = []
+        for item in SHOP_ITEMS:
+            can_buy = "✅" if current_xp >= item["cost"] else "🔒"
+            text = f"{can_buy} {item['name']} — {item['cost']} XP"
+            keyboard.append([InlineKeyboardButton(text, callback_data=f"buy_{item['id']}")])
+
+        keyboard.append([InlineKeyboardButton("↩️ برگشت", callback_data="show_today")])
+
+        msg += f"💡 با XP خرید کن! (XP کم نمیشه فقط از موجودیت کم میشه)\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━"
+
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+    except Exception as e:
+        logger.error(f"show_shop error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 📿 Daily Dhikr (ذکر روزانه)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def show_dhikr(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show today's dhikr."""
+    try:
+        from config import DAILY_DHIKR, DAILY_HADITHS, DUAS_BEFORE_HABIT
+
+        day_of_year = datetime.now().timetuple().tm_yday
+        dhikr = DAILY_DHIKR[day_of_year % len(DAILY_DHIKR)]
+        hadith = DAILY_HADITHS[day_of_year % len(DAILY_HADITHS)]
+
+        msg = f"📿 ذکر و معنویات امروز\n\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        msg += f"🕌 ذکر امروز:\n"
+        msg += f"  «{dhikr['text']}»\n"
+        msg += f"  {dhikr['meaning']}\n"
+        msg += f"  🔢 تعداد: {dhikr['count']}\n\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        msg += f"{hadith}\n\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        msg += f"🤲 دعاهای عادت‌ها:\n"
+        for key, dua in DUAS_BEFORE_HABIT.items():
+            msg += f"\n{dua}\n"
+
+        msg += f"\n━━━━━━━━━━━━━━━━━━━━━━━━"
+
+        await update.message.reply_text(msg, reply_markup=main_keyboard())
+    except Exception as e:
+        logger.error(f"show_dhikr error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 📖 Journal Archive (آرشیو تحلیل‌ها)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def show_journal_archive(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show recent journal entries."""
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+
+        journals = db.get_recent_journals(user_id, 10)
+
+        if not journals:
+            await update.message.reply_text(
+                "📖 هنوز تحلیلی ننوشتی!\n\nبرای نوشتن: «📝 تحلیل» رو بزن.",
+                reply_markup=main_keyboard(),
+            )
+            return
+
+        msg = f"📖 آرشیو تحلیل‌ها (۱۰ روز اخیر)\n\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+
+        for j in journals:
+            preview = j["content"][:80] + "..." if len(j["content"]) > 80 else j["content"]
+            mood = ""
+            if j.get("mood_score") and j["mood_score"] > 0:
+                from config import MOOD_TAGS
+                for m in MOOD_TAGS:
+                    if m["score"] == j["mood_score"]:
+                        mood = f" {m['emoji']}"
+                        break
+            msg += f"\n📅 {j['date']}{mood}\n"
+            msg += f"  «{preview}»\n"
+
+        msg += f"\n━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        msg += f"📊 مجموع: {len(journals)} تحلیل\n"
+
+        await update.message.reply_text(msg, reply_markup=main_keyboard())
+    except Exception as e:
+        logger.error(f"show_journal_archive error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 📌 Pin Status (پین وضعیت)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def pin_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send a pinnable status message."""
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        gm = _get_gm(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+
+        user = db.get_user(user_id)
+        date = today_str()
+        habits = db.get_today_habits(user_id, date)
+        done = sum(1 for v in habits.values() if v is not None)
+        course = db.get_course_today(user_id, date)
+        streaks = db.get_all_streaks(user_id)
+
+        bars = ["✅" if habits[k] else "⬜" for k in HABIT_ORDER]
+        progress = "".join(bars)
+
+        msg = f"📌 وضعیت — {date}\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        msg += f"{progress} عادت‌ها: {done}/3\n"
+        msg += f"📚 دوره: {'✅' if course else '⬜'}\n"
+        msg += f"{gm.format_xp_bar(user['xp'])}\n"
+
+        # Active streaks
+        active = [f"{HABITS[k]['icon']}{streaks[k]['current']}" for k in HABIT_ORDER if streaks.get(k, {}).get("current", 0) > 0]
+        if active:
+            msg += f"🔥 {' | '.join(active)}\n"
+
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        msg += f"💡 این پیام رو پین کن!"
+
+        sent_msg = await update.message.reply_text(msg, reply_markup=main_keyboard())
+
+        # Try to pin it (may fail if bot doesn't have permission)
+        try:
+            await context.bot.pin_chat_message(
+                chat_id=update.effective_chat.id,
+                message_id=sent_msg.message_id,
+                disable_notification=True,
+            )
+        except Exception:
+            pass  # Bot may not have pin permission in private chats
+
+    except Exception as e:
+        logger.error(f"pin_status error: {e}", exc_info=True)
         await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())
