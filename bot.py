@@ -124,6 +124,20 @@ def main():
     # ── Text Message Handler ─────────────────────────────────────────────
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
+    # ── Global Error Handler ─────────────────────────────────────────────
+    async def error_handler(update, context):
+        """Log errors and notify user."""
+        logger.error(f"Exception: {context.error}", exc_info=context.error)
+        if update and update.effective_message:
+            try:
+                await update.effective_message.reply_text(
+                    f"❌ خطای داخلی: {context.error}\n\n/start رو بزن."
+                )
+            except Exception:
+                pass
+
+    app.add_error_handler(error_handler)
+
     # ── Scheduled Jobs ───────────────────────────────────────────────────
     job_queue = app.job_queue
 

@@ -150,13 +150,17 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def show_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show today's status with habit buttons."""
-    user_id = update.effective_user.id
-    db = _get_db(context)
-    gm = _get_gm(context)
-    db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        gm = _get_gm(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
 
-    msg, keyboard = _build_today_view(user_id, db, gm)
-    await update.message.reply_text(msg, reply_markup=keyboard)
+        msg, keyboard = _build_today_view(user_id, db, gm)
+        await update.message.reply_text(msg, reply_markup=keyboard)
+    except Exception as e:
+        logger.error(f"show_today error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}\n\nلطفاً /start بزن.", reply_markup=main_keyboard())
 
 
 def _build_today_view(user_id: int, db: Database, gm: Gamification) -> tuple:
@@ -423,56 +427,60 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_course(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    db = _get_db(context)
-    gm = _get_gm(context)
-    db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        gm = _get_gm(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
 
-    user = db.get_user(user_id)
-    date = today_str()
-    course_today = db.get_course_today(user_id, date)
-    streak = db.get_streak(user_id, "course")
+        user = db.get_user(user_id)
+        date = today_str()
+        course_today = db.get_course_today(user_id, date)
+        streak = db.get_streak(user_id, "course")
 
-    session = user["course_session"]
-    chelle = user["course_chelle"]
-    progress_in_chelle = ((session - 1) % DAYS_PER_CHELLE) + 1
+        session = user["course_session"]
+        chelle = user["course_chelle"]
+        progress_in_chelle = ((session - 1) % DAYS_PER_CHELLE) + 1
 
-    # Chelle progress bar
-    chelle_pct = progress_in_chelle / DAYS_PER_CHELLE * 100
-    filled = int(chelle_pct / 10)
-    chelle_bar = "█" * filled + "░" * (10 - filled)
+        # Chelle progress bar
+        chelle_pct = progress_in_chelle / DAYS_PER_CHELLE * 100
+        filled = int(chelle_pct / 10)
+        chelle_bar = "█" * filled + "░" * (10 - filled)
 
-    msg = f"📚 دوره آموزشی عادت‌سازی\n\n"
-    msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-    msg += f"📍 جلسه: {session}\n"
-    msg += f"🔄 چهله {chelle} از {TOTAL_CHELLE}\n"
-    msg += f"📊 پیشرفت چهله: [{chelle_bar}] {progress_in_chelle}/{DAYS_PER_CHELLE}\n"
-    msg += f"⏱ مدت هر جلسه: {SESSION_DURATION_MINUTES} دقیقه\n"
-    msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        msg = f"📚 دوره آموزشی عادت‌سازی\n\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        msg += f"📍 جلسه: {session}\n"
+        msg += f"🔄 چهله {chelle} از {TOTAL_CHELLE}\n"
+        msg += f"📊 پیشرفت چهله: [{chelle_bar}] {progress_in_chelle}/{DAYS_PER_CHELLE}\n"
+        msg += f"⏱ مدت هر جلسه: {SESSION_DURATION_MINUTES} دقیقه\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
 
-    if course_today:
-        msg += f"✅ امروز دیدی! (جلسه {course_today['session_number']})\n"
-    else:
-        msg += f"⬜ امروز هنوز ندیدی!\n"
+        if course_today:
+            msg += f"✅ امروز دیدی! (جلسه {course_today['session_number']})\n"
+        else:
+            msg += f"⬜ امروز هنوز ندیدی!\n"
 
-    msg += f"\n🔥 استریک: {streak['current']} روز"
-    if streak["best"] > streak["current"]:
-        msg += f" (بهترین: {streak['best']})"
-    msg += "\n"
+        msg += f"\n🔥 استریک: {streak['current']} روز"
+        if streak["best"] > streak["current"]:
+            msg += f" (بهترین: {streak['best']})"
+        msg += "\n"
 
-    # Button
-    if course_today:
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("↩️ لغو ثبت امروز", callback_data="course_done")],
-            [InlineKeyboardButton("📋 وضعیت امروز", callback_data="show_today")],
-        ])
-    else:
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton(f"✅ جلسه {session} رو دیدم!", callback_data="course_done")],
-            [InlineKeyboardButton("📋 وضعیت امروز", callback_data="show_today")],
-        ])
+        # Button
+        if course_today:
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("↩️ لغو ثبت امروز", callback_data="course_done")],
+                [InlineKeyboardButton("📋 وضعیت امروز", callback_data="show_today")],
+            ])
+        else:
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"✅ جلسه {session} رو دیدم!", callback_data="course_done")],
+                [InlineKeyboardButton("📋 وضعیت امروز", callback_data="show_today")],
+            ])
 
-    await update.message.reply_text(msg, reply_markup=keyboard)
+        await update.message.reply_text(msg, reply_markup=keyboard)
+    except Exception as e:
+        logger.error(f"show_course error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}\n\n/start بزن.", reply_markup=main_keyboard())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -481,31 +489,37 @@ async def show_course(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cmd_setsession(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    db = _get_db(context)
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
 
-    if not context.args:
+        if not context.args:
+            await update.message.reply_text(
+                "مثال: /setsession 80\nعدد جلسه فعلیت رو بنویس.",
+                reply_markup=main_keyboard(),
+            )
+            return
+
+        raw = _normalize_persian_digits(context.args[0].strip())
+        try:
+            session = int(raw)
+            if session < 1 or session > 365:
+                raise ValueError()
+        except ValueError:
+            await update.message.reply_text("❌ عدد ۱ تا ۳۶۵ وارد کن.", reply_markup=main_keyboard())
+            return
+
+        db.set_course_session(user_id, session)
+        chelle = (session // DAYS_PER_CHELLE) + 1
+
         await update.message.reply_text(
-            "مثال: /setsession 80\nعدد جلسه فعلیت رو بنویس.",
+            f"✅ جلسه دوره روی {session} تنظیم شد!\n📍 چهله {min(chelle, TOTAL_CHELLE)} از {TOTAL_CHELLE}",
             reply_markup=main_keyboard(),
         )
-        return
-
-    try:
-        session = int(context.args[0])
-        if session < 1 or session > 365:
-            raise ValueError()
-    except ValueError:
-        await update.message.reply_text("❌ عدد ۱ تا ۳۶۵ وارد کن.", reply_markup=main_keyboard())
-        return
-
-    db.set_course_session(user_id, session)
-    chelle = (session // DAYS_PER_CHELLE) + 1
-
-    await update.message.reply_text(
-        f"✅ جلسه دوره روی {session} تنظیم شد!\n📍 چهله {min(chelle, TOTAL_CHELLE)} از {TOTAL_CHELLE}",
-        reply_markup=main_keyboard(),
-    )
+    except Exception as e:
+        logger.error(f"cmd_setsession error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -601,13 +615,17 @@ def _build_total_stats(user_id: int, db: Database, gm: Gamification) -> tuple:
 
 
 async def cmd_mystats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    db = _get_db(context)
-    gm = _get_gm(context)
-    db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        gm = _get_gm(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
 
-    msg, kb = _build_total_stats(user_id, db, gm)
-    await update.message.reply_text(msg, reply_markup=kb)
+        msg, kb = _build_total_stats(user_id, db, gm)
+        await update.message.reply_text(msg, reply_markup=kb)
+    except Exception as e:
+        logger.error(f"cmd_mystats error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -655,61 +673,61 @@ async def show_achievements(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_streaks(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    db = _get_db(context)
-    db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
 
-    streaks = db.get_all_streaks(user_id)
+        streaks = db.get_all_streaks(user_id)
 
-    msg = f"🔥 استریک‌ها\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        msg = f"🔥 استریک‌ها\n\n━━━━━━━━━━━━━━━━━━━━━━━━\n"
 
-    for key in HABIT_ORDER:
-        habit = HABITS[key]
-        s = streaks.get(key, {"current": 0, "best": 0})
-        current = s["current"]
-        best = s["best"]
+        for key in HABIT_ORDER:
+            habit = HABITS[key]
+            s = streaks.get(key, {"current": 0, "best": 0})
+            current = s["current"]
+            best = s["best"]
 
-        # Visual indicator
-        if current >= 40:
-            fire = "🏅"
-        elif current >= 21:
-            fire = "💎"
-        elif current >= 7:
-            fire = "🔥"
-        elif current >= 3:
-            fire = "✨"
-        elif current > 0:
-            fire = "🌱"
-        else:
-            fire = "💤"
+            if current >= 40:
+                fire = "🏅"
+            elif current >= 21:
+                fire = "💎"
+            elif current >= 7:
+                fire = "🔥"
+            elif current >= 3:
+                fire = "✨"
+            elif current > 0:
+                fire = "🌱"
+            else:
+                fire = "💤"
 
-        msg += f"\n{habit['icon']} {habit['name']}\n"
-        msg += f"  {fire} فعلی: {current} روز\n"
-        msg += f"  🏆 بهترین: {best} روز\n"
+            msg += f"\n{habit['icon']} {habit['name']}\n"
+            msg += f"  {fire} فعلی: {current} روز\n"
+            msg += f"  🏆 بهترین: {best} روز\n"
 
-        # Progress to next milestone
-        milestones = [3, 7, 14, 21, 30, 40, 66]
-        next_milestone = next((m for m in milestones if m > current), None)
-        if next_milestone:
-            remaining = next_milestone - current
-            msg += f"  🎯 تا {next_milestone} روز: {remaining} روز مونده\n"
+            milestones = [3, 7, 14, 21, 30, 40, 66]
+            next_milestone = next((m for m in milestones if m > current), None)
+            if next_milestone:
+                remaining = next_milestone - current
+                msg += f"  🎯 تا {next_milestone} روز: {remaining} روز مونده\n"
 
-    # Course streak
-    cs = streaks.get("course", {"current": 0, "best": 0})
-    msg += f"\n📚 دوره آموزشی\n"
-    msg += f"  {'🔥' if cs['current'] > 0 else '💤'} فعلی: {cs['current']} روز\n"
-    msg += f"  🏆 بهترین: {cs['best']} روز\n"
+        cs = streaks.get("course", {"current": 0, "best": 0})
+        msg += f"\n📚 دوره آموزشی\n"
+        msg += f"  {'🔥' if cs['current'] > 0 else '💤'} فعلی: {cs['current']} روز\n"
+        msg += f"  🏆 بهترین: {cs['best']} روز\n"
 
-    # Perfect day streak
-    ps = streaks.get("perfect_day", {"current": 0, "best": 0})
-    msg += f"\n🏆 روز کامل\n"
-    msg += f"  {'🔥' if ps['current'] > 0 else '💤'} فعلی: {ps['current']} روز\n"
-    msg += f"  🏆 بهترین: {ps['best']} روز\n"
+        ps = streaks.get("perfect_day", {"current": 0, "best": 0})
+        msg += f"\n🏆 روز کامل\n"
+        msg += f"  {'🔥' if ps['current'] > 0 else '💤'} فعلی: {ps['current']} روز\n"
+        msg += f"  🏆 بهترین: {ps['best']} روز\n"
 
-    msg += f"\n━━━━━━━━━━━━━━━━━━━━━━━━"
-    msg += f"\n\n{random.choice(MOTIVATIONAL_MSGS)}"
+        msg += f"\n━━━━━━━━━━━━━━━━━━━━━━━━"
+        msg += f"\n\n{random.choice(MOTIVATIONAL_MSGS)}"
 
-    await update.message.reply_text(msg, reply_markup=main_keyboard())
+        await update.message.reply_text(msg, reply_markup=main_keyboard())
+    except Exception as e:
+        logger.error(f"show_streaks error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
