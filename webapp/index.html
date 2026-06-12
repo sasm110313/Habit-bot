@@ -5,36 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>عادت‌ساز</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         /* ═══════════════════════════════════════════════════════════════════
-           Telegram Native Design System
-           Based on official TelegramUI component library patterns
-           Uses all official theme CSS variables
+           Telegram 2025 Premium Dark UI
+           Inspired by TON Wallet / Telegram Premium aesthetic
+           Glassmorphism + Dark Mode + Native App Feel
         ═══════════════════════════════════════════════════════════════════ */
 
         :root {
-            /* Fallback values matching Telegram light theme */
-            --tg-theme-bg-color: #ffffff;
-            --tg-theme-text-color: #000000;
-            --tg-theme-hint-color: #999999;
-            --tg-theme-link-color: #2481cc;
-            --tg-theme-button-color: #3390ec;
-            --tg-theme-button-text-color: #ffffff;
-            --tg-theme-secondary-bg-color: #efeff4;
-            --tg-theme-header-bg-color: #ffffff;
-            --tg-theme-bottom-bar-bg-color: #ffffff;
-            --tg-theme-accent-text-color: #3390ec;
-            --tg-theme-section-bg-color: #ffffff;
-            --tg-theme-section-header-text-color: #6d6d72;
-            --tg-theme-section-separator-color: #c8c7cc;
-            --tg-theme-subtitle-text-color: #8e8e93;
-            --tg-theme-destructive-text-color: #ff3b30;
-
-            /* Layout */
-            --section-radius: 12px;
-            --cell-padding: 16px;
-            --section-gap: 24px;
+            --bg-primary: #0E0F11;
+            --bg-surface: #17181C;
+            --bg-elevated: #1F2025;
+            --bg-glass: rgba(31, 32, 37, 0.7);
+            --accent: #2AABEE;
+            --accent-secondary: #0098EA;
+            --accent-glow: rgba(42, 171, 238, 0.15);
+            --accent-glow-strong: rgba(42, 171, 238, 0.3);
+            --success: #22C55E;
+            --success-glow: rgba(34, 197, 94, 0.15);
+            --warning: #F59E0B;
+            --warning-glow: rgba(245, 158, 11, 0.15);
+            --danger: #EF4444;
+            --danger-glow: rgba(239, 68, 68, 0.15);
+            --text-primary: #FFFFFF;
+            --text-secondary: #A1A1AA;
+            --text-tertiary: #71717A;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-light: rgba(255, 255, 255, 0.1);
+            --radius-sm: 12px;
+            --radius-md: 16px;
+            --radius-lg: 20px;
+            --radius-xl: 24px;
+            --radius-full: 9999px;
             --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+            --shadow-glow: 0 0 20px var(--accent-glow);
         }
 
         * {
@@ -47,263 +57,326 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
-                         'Helvetica Neue', Roboto, 'Segoe UI', Arial, sans-serif;
-            background: var(--tg-theme-secondary-bg-color);
-            color: var(--tg-theme-text-color);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             direction: rtl;
             min-height: 100vh;
-            padding-bottom: calc(64px + var(--safe-bottom));
+            padding-bottom: calc(80px + var(--safe-bottom));
             overflow-x: hidden;
-            font-size: 17px;
-            line-height: 1.4;
+            font-size: 15px;
+            line-height: 1.5;
             letter-spacing: -0.01em;
         }
 
-        /* ═══════════════════ Typography (Telegram Native) ═══════════════════ */
-        .text-title {
-            font-size: 17px;
-            font-weight: 600;
-            letter-spacing: -0.02em;
+        /* ═══════════════════ Animations ═══════════════════ */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        .text-body {
-            font-size: 17px;
-            font-weight: 400;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
-        .text-subhead {
-            font-size: 15px;
-            font-weight: 400;
-            color: var(--tg-theme-subtitle-text-color);
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
         }
 
-        .text-caption {
-            font-size: 13px;
-            font-weight: 400;
-            color: var(--tg-theme-hint-color);
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px var(--accent-glow); }
+            50% { box-shadow: 0 0 40px var(--accent-glow-strong); }
         }
 
-        .text-section-header {
-            font-size: 13px;
-            font-weight: 400;
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
-            color: var(--tg-theme-section-header-text-color);
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
-        /* ═══════════════════ Sections (Telegram iOS Style) ═══════════════════ */
-        .section {
-            margin-bottom: var(--section-gap);
+        .animate-in {
+            animation: fadeUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
         }
 
-        .section-header {
-            padding: 8px var(--cell-padding) 6px;
-            font-size: 13px;
-            font-weight: 400;
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
-            color: var(--tg-theme-section-header-text-color);
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-surface) 50%, var(--bg-elevated) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: var(--radius-sm);
         }
 
-        .section-body {
-            background: var(--tg-theme-section-bg-color);
-            border-radius: var(--section-radius);
-            overflow: hidden;
-            margin: 0 16px;
-        }
-
-        .section-footer {
-            padding: 6px var(--cell-padding) 0;
-            font-size: 13px;
-            color: var(--tg-theme-hint-color);
-            margin: 0 16px;
-        }
-
-        /* ═══════════════════ Cells (Telegram Native) ═══════════════════ */
-        .cell {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 11px var(--cell-padding);
-            min-height: 44px;
-            position: relative;
-            transition: background 0.15s ease;
-            cursor: pointer;
-        }
-
-        .cell:active {
-            background: var(--tg-theme-secondary-bg-color);
-        }
-
-        .cell + .cell::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: var(--cell-padding);
-            left: 0;
-            height: 0.5px;
-            background: var(--tg-theme-section-separator-color);
-            opacity: 0.5;
-        }
-
-        .cell-icon {
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 6px;
-            flex-shrink: 0;
-        }
-
-        .cell-icon svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        .cell-icon-lg {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-        }
-
-        .cell-icon-lg svg {
-            width: 22px;
-            height: 22px;
-        }
-
-        .cell-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .cell-title {
-            font-size: 17px;
-            font-weight: 400;
-            color: var(--tg-theme-text-color);
-        }
-
-        .cell-subtitle {
-            font-size: 14px;
-            color: var(--tg-theme-subtitle-text-color);
-            margin-top: 1px;
-        }
-
-        .cell-value {
-            font-size: 17px;
-            color: var(--tg-theme-hint-color);
-        }
-
-        .cell-badge {
-            padding: 2px 8px;
-            background: var(--tg-theme-button-color);
-            color: var(--tg-theme-button-text-color);
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .cell-chevron {
-            width: 7px;
-            height: 12px;
-            color: var(--tg-theme-hint-color);
-            opacity: 0.5;
-            flex-shrink: 0;
-        }
-
-        /* ═══════════════════ Header / XP Bar ═══════════════════ */
+        /* ═══════════════════ Header ═══════════════════ */
         .app-header {
             position: sticky;
             top: 0;
             z-index: 100;
-            background: var(--tg-theme-header-bg-color);
-            padding: 12px 16px 14px;
-            border-bottom: 0.5px solid var(--tg-theme-section-separator-color);
+            padding: 16px 20px;
+            background: rgba(14, 15, 17, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
         }
 
-        .xp-container {
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .header-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-badge svg {
+            width: 16px;
+            height: 16px;
+            color: var(--accent);
+        }
+
+        /* ═══════════════════ Hero XP Card ═══════════════════ */
+        .hero-card {
+            margin: 16px 16px 20px;
+            padding: 24px;
+            border-radius: var(--radius-xl);
+            background: linear-gradient(135deg, #1a2332 0%, #0f1923 50%, #1a1f2e 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 8s ease infinite;
+            border: 1px solid var(--border-light);
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg), 0 0 60px rgba(42, 171, 238, 0.05);
+        }
+
+        .hero-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-level-row {
             display: flex;
             align-items: center;
             gap: 12px;
+            margin-bottom: 20px;
+            position: relative;
         }
 
-        .level-icon {
-            width: 44px;
-            height: 44px;
+        .hero-level-icon {
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            background: var(--tg-theme-secondary-bg-color);
+            background: var(--accent-glow);
+            border: 2px solid var(--accent);
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
+            box-shadow: 0 0 20px var(--accent-glow);
         }
 
-        .level-icon svg {
+        .hero-level-icon svg {
             width: 24px;
             height: 24px;
+            color: var(--accent);
         }
 
-        .xp-details {
+        .hero-level-info {
             flex: 1;
-            min-width: 0;
         }
 
-        .xp-level-name {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--tg-theme-text-color);
+        .hero-level-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
         }
 
-        .xp-progress-bar {
-            height: 4px;
-            background: var(--tg-theme-secondary-bg-color);
-            border-radius: 2px;
-            margin-top: 6px;
+        .hero-level-sub {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .hero-xp-display {
+            text-align: center;
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .hero-xp-value {
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-xp-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .hero-progress {
+            position: relative;
+        }
+
+        .hero-progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: var(--radius-full);
             overflow: hidden;
         }
 
-        .xp-progress-fill {
+        .hero-progress-fill {
             height: 100%;
-            background: var(--tg-theme-button-color);
-            border-radius: 2px;
-            transition: width 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            background: linear-gradient(90deg, var(--accent-secondary), var(--accent));
+            border-radius: var(--radius-full);
+            transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            box-shadow: 0 0 10px var(--accent-glow);
         }
 
-        .xp-sub-text {
+        .hero-progress-text {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
             font-size: 12px;
-            color: var(--tg-theme-hint-color);
-            margin-top: 3px;
-        }
-
-        .xp-total-badge {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--tg-theme-accent-text-color);
-            flex-shrink: 0;
+            color: var(--text-tertiary);
         }
 
         /* ═══════════════════ Pages ═══════════════════ */
         .page {
             display: none;
-            padding: 16px 0;
-            animation: pageIn 0.25s ease;
+            padding: 0 0 20px;
         }
 
         .page.active {
             display: block;
+            animation: fadeUp 0.3s ease;
         }
 
-        @keyframes pageIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* ═══════════════════ Section ═══════════════════ */
+        .section {
+            margin-bottom: 20px;
         }
 
-        /* ═══════════════════ Habit Level Buttons ═══════════════════ */
+        .section-header {
+            padding: 0 20px 10px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-tertiary);
+        }
+
+        .section-card {
+            margin: 0 16px;
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        /* ═══════════════════ Habit Cards ═══════════════════ */
+        .habit-item {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .habit-item:last-child {
+            border-bottom: none;
+        }
+
+        .habit-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 12px;
+        }
+
+        .habit-icon-wrap {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .habit-icon-wrap svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .habit-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .habit-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .habit-streak {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 3px;
+            font-size: 13px;
+            color: #F97316;
+            font-weight: 500;
+        }
+
+        .habit-streak svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .habit-check {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--success);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .habit-check.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .habit-check svg {
+            width: 16px;
+            height: 16px;
+            color: #fff;
+        }
+
         .habit-levels {
             display: flex;
             gap: 8px;
-            padding: 8px var(--cell-padding) 14px;
         }
 
         .level-btn {
@@ -311,145 +384,199 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 4px;
-            padding: 12px 6px;
-            background: var(--tg-theme-secondary-bg-color);
-            border: 2px solid transparent;
-            border-radius: 12px;
+            gap: 6px;
+            padding: 12px 8px;
+            background: var(--bg-elevated);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-md);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             -webkit-user-select: none;
             user-select: none;
         }
 
         .level-btn:active {
-            transform: scale(0.96);
+            transform: scale(0.95);
         }
 
-        .level-btn-icon {
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .level-btn-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
         }
 
         .level-btn-label {
             font-size: 12px;
             font-weight: 600;
-            color: var(--tg-theme-text-color);
+            color: var(--text-secondary);
         }
 
         .level-btn-xp {
             font-size: 11px;
-            color: var(--tg-theme-hint-color);
+            color: var(--text-tertiary);
         }
 
         .level-btn.selected {
-            border-color: var(--tg-theme-button-color);
-            background: color-mix(in srgb, var(--tg-theme-button-color) 8%, transparent);
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            box-shadow: 0 0 16px var(--accent-glow);
         }
 
         .level-btn.selected .level-btn-label {
-            color: var(--tg-theme-button-color);
+            color: var(--accent);
         }
 
-        /* ═══════════════════ Inline Button ═══════════════════ */
-        .tg-button {
+        /* ═══════════════════ Course Card ═══════════════════ */
+        .course-card {
+            margin: 0 16px 20px;
+            padding: 18px 20px;
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .course-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-sm);
+            background: rgba(0, 122, 255, 0.12);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            width: 100%;
-            padding: 14px 20px;
-            background: var(--tg-theme-button-color);
-            color: var(--tg-theme-button-text-color);
+            flex-shrink: 0;
+        }
+
+        .course-icon svg {
+            width: 22px;
+            height: 22px;
+            color: #007AFF;
+        }
+
+        .course-info {
+            flex: 1;
+        }
+
+        .course-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .course-sub {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .course-btn {
+            padding: 10px 18px;
+            background: var(--accent);
+            color: #fff;
             border: none;
-            border-radius: 12px;
-            font-size: 17px;
+            border-radius: var(--radius-full);
+            font-size: 14px;
             font-weight: 600;
             font-family: inherit;
             cursor: pointer;
             transition: all 0.2s ease;
-            -webkit-user-select: none;
-            user-select: none;
+            white-space: nowrap;
         }
 
-        .tg-button:active {
-            transform: scale(0.97);
+        .course-btn:active {
+            transform: scale(0.94);
             opacity: 0.85;
         }
 
-        .tg-button.done {
-            background: #34c759;
-        }
-
-        .tg-button-secondary {
-            background: var(--tg-theme-secondary-bg-color);
-            color: var(--tg-theme-button-color);
-        }
-
-        .tg-button-sm {
-            padding: 10px 16px;
-            font-size: 15px;
-            border-radius: 10px;
+        .course-btn.done {
+            background: var(--success);
         }
 
         /* ═══════════════════ Challenge Banner ═══════════════════ */
         .challenge-banner {
-            margin: 0 16px 16px;
-            padding: 16px;
-            background: linear-gradient(135deg, var(--tg-theme-button-color), #7c4dff);
-            border-radius: var(--section-radius);
-            color: #ffffff;
+            margin: 0 16px 20px;
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            background: linear-gradient(135deg, rgba(42, 171, 238, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+            border: 1px solid rgba(42, 171, 238, 0.2);
+            position: relative;
+            overflow: hidden;
         }
 
-        .challenge-title {
+        .challenge-banner::before {
+            content: '';
+            position: absolute;
+            top: -30px;
+            left: -30px;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, rgba(42, 171, 238, 0.3), transparent);
+            border-radius: 50%;
+        }
+
+        .challenge-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        .challenge-text {
             font-size: 15px;
             font-weight: 600;
-            margin-bottom: 4px;
+            color: var(--text-primary);
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .challenge-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .challenge-reward {
             font-size: 13px;
-            opacity: 0.85;
+            color: var(--accent);
+            font-weight: 600;
         }
 
         .challenge-status {
-            margin-top: 8px;
             font-size: 13px;
-            font-weight: 700;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: var(--radius-full);
+            background: var(--bg-elevated);
         }
 
-        /* ═══════════════════ Journal / Textarea ═══════════════════ */
-        .journal-section {
-            margin: 0 16px;
+        .challenge-status.done {
+            background: var(--success-glow);
+            color: var(--success);
         }
 
-        .journal-textarea {
-            width: 100%;
-            min-height: 88px;
-            padding: 12px 16px;
-            border: none;
-            border-radius: var(--section-radius);
-            background: var(--tg-theme-section-bg-color);
-            color: var(--tg-theme-text-color);
-            font-size: 17px;
-            font-family: inherit;
-            direction: rtl;
-            resize: none;
-            outline: none;
-            line-height: 1.4;
+        /* ═══════════════════ Journal ═══════════════════ */
+        .journal-card {
+            margin: 0 16px 20px;
+            padding: 20px;
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
         }
 
-        .journal-textarea::placeholder {
-            color: var(--tg-theme-hint-color);
+        .journal-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 14px;
         }
 
         .mood-row {
             display: flex;
             gap: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 14px;
         }
 
         .mood-btn {
@@ -458,63 +585,135 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: var(--tg-theme-section-bg-color);
-            border: 2px solid transparent;
-            border-radius: 12px;
+            background: var(--bg-elevated);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
         .mood-btn:active {
-            transform: scale(0.94);
-        }
-
-        .mood-btn.selected {
-            border-color: var(--tg-theme-button-color);
-            background: color-mix(in srgb, var(--tg-theme-button-color) 10%, var(--tg-theme-section-bg-color));
+            transform: scale(0.93);
         }
 
         .mood-btn svg {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
         }
 
-        /* ═══════════════════ Stats ═══════════════════ */
-        .stat-grid {
+        .mood-btn.selected {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .journal-textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 14px 16px;
+            background: var(--bg-elevated);
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: inherit;
+            direction: rtl;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s ease;
+            line-height: 1.5;
+        }
+
+        .journal-textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .journal-textarea::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .journal-submit {
+            margin-top: 12px;
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .journal-submit:active {
+            transform: scale(0.97);
+            opacity: 0.85;
+        }
+
+        .journal-submit svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* ═══════════════════ Stats Page ═══════════════════ */
+        .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-            margin: 0 16px 16px;
+            margin: 0 16px 20px;
         }
 
         .stat-card {
-            background: var(--tg-theme-section-bg-color);
-            border-radius: var(--section-radius);
-            padding: 16px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 18px 16px;
             text-align: center;
         }
 
         .stat-value {
             font-size: 28px;
-            font-weight: 700;
-            color: var(--tg-theme-accent-text-color);
-            letter-spacing: -0.02em;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--accent);
         }
 
         .stat-label {
             font-size: 12px;
-            color: var(--tg-theme-hint-color);
+            color: var(--text-tertiary);
             margin-top: 4px;
+            font-weight: 500;
         }
 
-        /* Weekly Chart */
-        .chart-container {
+        /* Chart */
+        .chart-card {
+            margin: 0 16px 20px;
+            padding: 20px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+        }
+
+        .chart-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .chart-bars {
             display: flex;
             align-items: flex-end;
             justify-content: space-between;
             height: 100px;
-            padding: 12px var(--cell-padding);
-            gap: 6px;
+            gap: 8px;
         }
 
         .chart-col {
@@ -522,22 +721,25 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            height: 100%;
+            justify-content: flex-end;
         }
 
         .chart-bar {
             width: 100%;
             max-width: 28px;
-            background: var(--tg-theme-button-color);
-            border-radius: 4px 4px 0 0;
+            border-radius: 6px 6px 0 0;
+            background: linear-gradient(180deg, var(--accent), var(--accent-secondary));
             min-height: 4px;
-            transition: height 0.4s ease;
+            transition: height 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             opacity: 0.85;
         }
 
-        .chart-label {
+        .chart-day {
             font-size: 11px;
-            color: var(--tg-theme-hint-color);
+            color: var(--text-tertiary);
+            font-weight: 500;
         }
 
         /* Calendar */
@@ -545,7 +747,7 @@
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 4px;
-            padding: 12px var(--cell-padding);
+            padding: 16px;
         }
 
         .cal-cell {
@@ -556,40 +758,30 @@
             justify-content: center;
         }
 
-        .cal-cell.perfect { background: #34c759; }
-        .cal-cell.partial { background: #ff9500; }
-        .cal-cell.empty { background: var(--tg-theme-secondary-bg-color); }
-        .cal-cell.today { box-shadow: inset 0 0 0 2px var(--tg-theme-button-color); }
+        .cal-cell.perfect { background: var(--success); }
+        .cal-cell.partial { background: var(--warning); }
+        .cal-cell.empty { background: var(--bg-elevated); }
+        .cal-cell.today { box-shadow: inset 0 0 0 2px var(--accent); }
 
-        .cal-cell svg {
-            width: 14px;
-            height: 14px;
-            color: #fff;
-        }
+        .cal-cell svg { width: 12px; height: 12px; color: #fff; }
 
-        /* ═══════════════════ Journey Map ═══════════════════ */
-        .journey-node {
+        /* ═══════════════════ Journey ═══════════════════ */
+        .journey-item {
             display: flex;
             align-items: center;
             gap: 14px;
-            padding: 14px var(--cell-padding);
-            position: relative;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            transition: opacity 0.2s;
         }
 
-        .journey-node + .journey-node::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: var(--cell-padding);
-            left: 0;
-            height: 0.5px;
-            background: var(--tg-theme-section-separator-color);
-            opacity: 0.5;
-        }
+        .journey-item:last-child { border-bottom: none; }
+        .journey-item.locked { opacity: 0.35; }
+        .journey-item.completed { opacity: 0.6; }
 
         .journey-icon {
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -597,42 +789,36 @@
             flex-shrink: 0;
         }
 
-        .journey-icon svg {
-            width: 22px;
-            height: 22px;
-        }
+        .journey-icon svg { width: 20px; height: 20px; }
 
-        .journey-info {
-            flex: 1;
-        }
+        .journey-info { flex: 1; }
 
         .journey-name {
-            font-size: 17px;
-            font-weight: 500;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
         }
 
         .journey-desc {
-            font-size: 14px;
-            color: var(--tg-theme-subtitle-text-color);
+            font-size: 13px;
+            color: var(--text-tertiary);
             margin-top: 2px;
         }
 
         .journey-progress {
             height: 4px;
-            background: var(--tg-theme-secondary-bg-color);
-            border-radius: 2px;
+            background: var(--bg-elevated);
+            border-radius: var(--radius-full);
             margin-top: 8px;
             overflow: hidden;
         }
 
         .journey-progress-fill {
             height: 100%;
-            background: var(--tg-theme-button-color);
-            border-radius: 2px;
+            background: linear-gradient(90deg, var(--accent-secondary), var(--accent));
+            border-radius: var(--radius-full);
+            box-shadow: 0 0 8px var(--accent-glow);
         }
-
-        .journey-node.completed { opacity: 0.6; }
-        .journey-node.locked { opacity: 0.35; }
 
         /* ═══════════════════ Achievements ═══════════════════ */
         .ach-grid {
@@ -643,132 +829,196 @@
         }
 
         .ach-item {
-            background: var(--tg-theme-section-bg-color);
-            border-radius: var(--section-radius);
-            padding: 16px 8px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 18px 10px;
             text-align: center;
             transition: all 0.2s ease;
         }
 
-        .ach-item.locked {
-            opacity: 0.3;
-        }
+        .ach-item.locked { opacity: 0.25; }
 
         .ach-icon {
             width: 36px;
             height: 36px;
-            margin: 0 auto 8px;
+            margin: 0 auto 10px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .ach-icon svg {
-            width: 32px;
-            height: 32px;
-        }
+        .ach-icon svg { width: 30px; height: 30px; }
 
         .ach-name {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
-            color: var(--tg-theme-text-color);
+            color: var(--text-secondary);
         }
 
-        /* ═══════════════════ Shop ═══════════════════ */
+        /* ═══════════════════ More Page ═══════════════════ */
+        .dhikr-card {
+            margin: 0 16px 20px;
+            padding: 28px 20px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            text-align: center;
+        }
+
+        .dhikr-arabic {
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 2;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+
+        .dhikr-meaning {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 10px;
+        }
+
+        .dhikr-count {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .hadith-card {
+            margin: 0 16px 20px;
+            padding: 20px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+        }
+
+        .hadith-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 10px;
+        }
+
+        .hadith-text {
+            font-size: 14px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+        }
+
+        /* Streaks */
+        .streak-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .streak-item:last-child { border-bottom: none; }
+
+        .streak-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .streak-icon svg { width: 18px; height: 18px; }
+
+        .streak-info { flex: 1; }
+
+        .streak-name {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .streak-best {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        .streak-badge {
+            padding: 4px 10px;
+            background: rgba(249, 115, 22, 0.12);
+            color: #F97316;
+            border-radius: var(--radius-full);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        /* Shop */
         .shop-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px var(--cell-padding);
-            position: relative;
+            gap: 14px;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .shop-item + .shop-item::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: var(--cell-padding);
-            left: 0;
-            height: 0.5px;
-            background: var(--tg-theme-section-separator-color);
-            opacity: 0.5;
-        }
+        .shop-item:last-child { border-bottom: none; }
 
-        .shop-info {
-            flex: 1;
-        }
+        .shop-info { flex: 1; }
 
         .shop-name {
-            font-size: 17px;
-            font-weight: 400;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
         }
 
         .shop-cost {
-            font-size: 14px;
-            color: var(--tg-theme-hint-color);
+            font-size: 13px;
+            color: var(--text-tertiary);
+            margin-top: 2px;
         }
 
-        .shop-buy-btn {
+        .shop-buy {
             padding: 8px 16px;
-            background: var(--tg-theme-button-color);
-            color: var(--tg-theme-button-text-color);
+            background: var(--accent);
+            color: #fff;
             border: none;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: var(--radius-full);
+            font-size: 13px;
             font-weight: 600;
             font-family: inherit;
             cursor: pointer;
             transition: all 0.2s ease;
         }
 
-        .shop-buy-btn:disabled {
-            opacity: 0.4;
+        .shop-buy:disabled {
+            opacity: 0.3;
             cursor: not-allowed;
         }
 
-        .shop-buy-btn:active:not(:disabled) {
-            transform: scale(0.95);
-        }
-
-        /* ═══════════════════ Dhikr ═══════════════════ */
-        .dhikr-section {
-            text-align: center;
-            padding: 24px var(--cell-padding);
-        }
-
-        .dhikr-arabic {
-            font-size: 24px;
-            font-weight: 600;
-            line-height: 1.8;
-            margin-bottom: 10px;
-            color: var(--tg-theme-text-color);
-        }
-
-        .dhikr-meaning {
-            font-size: 14px;
-            color: var(--tg-theme-subtitle-text-color);
-            line-height: 1.6;
-            margin-bottom: 8px;
-        }
-
-        .dhikr-count {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--tg-theme-accent-text-color);
+        .shop-buy:active:not(:disabled) {
+            transform: scale(0.94);
         }
 
         /* ═══════════════════ Bottom Tab Bar ═══════════════════ */
         .tab-bar {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            bottom: 16px;
+            left: 16px;
+            right: 16px;
+            padding-bottom: var(--safe-bottom);
             display: flex;
-            background: var(--tg-theme-bottom-bar-bg-color);
-            border-top: 0.5px solid var(--tg-theme-section-separator-color);
-            padding: 6px 0;
-            padding-bottom: calc(6px + var(--safe-bottom));
+            background: rgba(23, 24, 28, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-full);
+            padding: 8px 6px;
             z-index: 200;
+            box-shadow: var(--shadow-lg);
         }
 
         .tab-item {
@@ -776,325 +1026,285 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px;
-            padding: 4px 0;
+            gap: 3px;
+            padding: 8px 0;
             cursor: pointer;
             -webkit-user-select: none;
             user-select: none;
-            transition: color 0.2s ease;
-            color: var(--tg-theme-hint-color);
+            transition: all 0.2s ease;
+            color: var(--text-tertiary);
             text-decoration: none;
+            border-radius: var(--radius-full);
         }
 
         .tab-item.active {
-            color: var(--tg-theme-button-color);
+            color: var(--accent);
+            background: var(--accent-glow);
         }
 
         .tab-item svg {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
         }
 
         .tab-label {
             font-size: 10px;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         /* ═══════════════════ Toast ═══════════════════ */
         .toast {
             position: fixed;
-            top: 16px;
+            top: 20px;
             left: 50%;
-            transform: translateX(-50%) translateY(-80px);
-            background: var(--tg-theme-text-color);
-            color: var(--tg-theme-bg-color);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 15px;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            padding: 12px 24px;
+            border-radius: var(--radius-full);
+            font-size: 14px;
             font-weight: 600;
             z-index: 1000;
-            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             white-space: nowrap;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
         }
 
         .toast.show {
             transform: translateX(-50%) translateY(0);
         }
 
-        /* ═══════════════════ Utilities ═══════════════════ */
-        .padded {
-            padding: 0 16px;
-        }
-
-        .mb-12 { margin-bottom: 12px; }
-        .mb-16 { margin-bottom: 16px; }
-
-        .streak-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 3px 8px;
-            background: #ff6b3515;
-            color: #ff6b35;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .streak-pill svg {
-            width: 14px;
-            height: 14px;
-        }
-
+        /* ═══════════════════ Empty / Loading ═══════════════════ */
         .empty-state {
             text-align: center;
             padding: 40px 20px;
-            color: var(--tg-theme-hint-color);
+            color: var(--text-tertiary);
             font-size: 15px;
-        }
-
-        .loading-spinner {
-            text-align: center;
-            padding: 40px;
-        }
-
-        .loading-spinner::after {
-            content: '';
-            display: block;
-            width: 24px;
-            height: 24px;
-            margin: 0 auto;
-            border: 2.5px solid var(--tg-theme-secondary-bg-color);
-            border-top-color: var(--tg-theme-button-color);
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <!-- Toast notification -->
+    <!-- Toast -->
     <div class="toast" id="toast"></div>
 
-    <!-- ═══════════════ Header ═══════════════ -->
+    <!-- Header -->
     <div class="app-header">
-        <div class="xp-container">
-            <div class="level-icon" id="levelIcon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #34c759">
-                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+        <div class="header-content">
+            <div class="header-badge">
+                <span class="header-title">عادت‌ساز</span>
+                <svg viewBox="0 0 24 24" fill="var(--accent)" stroke="none">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
             </div>
-            <div class="xp-details">
-                <div class="xp-level-name" id="levelName">تازه‌کار — سطح ۱</div>
-                <div class="xp-progress-bar">
-                    <div class="xp-progress-fill" id="xpBarFill" style="width: 0%"></div>
-                </div>
-                <div class="xp-sub-text" id="xpText">0 / 200 XP</div>
-            </div>
-            <div class="xp-total-badge" id="xpTotal">0 XP</div>
+            <div style="font-size:13px;color:var(--text-tertiary);font-weight:500" id="todayDate"></div>
         </div>
     </div>
 
     <!-- ═══════════════ Today Page ═══════════════ -->
     <div class="page active" id="page-today">
 
-        <!-- Habits Section -->
+        <!-- Hero XP Card -->
+        <div class="hero-card">
+            <div class="hero-level-row">
+                <div class="hero-level-icon" id="heroLevelIcon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                </div>
+                <div class="hero-level-info">
+                    <div class="hero-level-name" id="heroLevelName">تازه‌کار</div>
+                    <div class="hero-level-sub" id="heroLevelSub">سطح ۱</div>
+                </div>
+            </div>
+            <div class="hero-xp-display">
+                <div class="hero-xp-value" id="heroXP">0</div>
+                <div class="hero-xp-label">امتیاز کل</div>
+            </div>
+            <div class="hero-progress">
+                <div class="hero-progress-bar">
+                    <div class="hero-progress-fill" id="heroProgressFill" style="width: 0%"></div>
+                </div>
+                <div class="hero-progress-text">
+                    <span id="heroProgressCurrent">0 XP</span>
+                    <span id="heroProgressNext">200 XP</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Habits -->
         <div class="section">
             <div class="section-header">عادت‌های امروز</div>
-            <div class="section-body">
+            <div class="section-card">
 
                 <!-- Namaz -->
-                <div class="cell" id="habit-cell-namaz">
-                    <div class="cell-icon cell-icon-lg" style="background: #5856d620">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 2C8 2 5 5 5 9c0 4 7 13 7 13s7-9 7-13c0-4-3-7-7-7z"/>
-                            <circle cx="12" cy="9" r="2"/>
-                        </svg>
-                    </div>
-                    <div class="cell-content">
-                        <div class="cell-title">تمرکز در نماز</div>
-                        <div class="cell-subtitle" id="streak-namaz-text"></div>
-                    </div>
-                    <span id="habit-check-namaz"></span>
-                </div>
-                <div class="habit-levels" id="levels-namaz">
-                    <div class="level-btn" onclick="logHabit('namaz','small')" data-level="small">
-                        <div class="level-btn-icon">
-                            <svg viewBox="0 0 24 24" fill="#34c759" stroke="none"><circle cx="12" cy="12" r="8"/></svg>
+                <div class="habit-item" id="habit-namaz">
+                    <div class="habit-row">
+                        <div class="habit-icon-wrap" style="background:rgba(88,86,214,0.12)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#5856D6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22c5-4 8-8 8-12a8 8 0 00-16 0c0 4 3 8 8 12z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
                         </div>
-                        <span class="level-btn-label">کوچک</span>
-                        <span class="level-btn-xp">+30 XP</span>
-                    </div>
-                    <div class="level-btn" onclick="logHabit('namaz','special')" data-level="special">
-                        <div class="level-btn-icon">
-                            <svg viewBox="0 0 24 24" fill="#ff9500" stroke="none"><circle cx="12" cy="12" r="8"/></svg>
+                        <div class="habit-info">
+                            <div class="habit-name">تمرکز در نماز</div>
+                            <div class="habit-streak" id="streak-namaz"></div>
                         </div>
-                        <span class="level-btn-label">ویژه</span>
-                        <span class="level-btn-xp">+20 XP</span>
-                    </div>
-                    <div class="level-btn" onclick="logHabit('namaz','emergency')" data-level="emergency">
-                        <div class="level-btn-icon">
-                            <svg viewBox="0 0 24 24" fill="#ff3b30" stroke="none"><circle cx="12" cy="12" r="8"/></svg>
+                        <div class="habit-check" id="check-namaz">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                         </div>
-                        <span class="level-btn-label">اضطراری</span>
-                        <span class="level-btn-xp">+10 XP</span>
+                    </div>
+                    <div class="habit-levels" id="levels-namaz">
+                        <div class="level-btn" onclick="logHabit('namaz','small')" data-level="small">
+                            <div class="level-btn-dot" style="background:#22C55E"></div>
+                            <span class="level-btn-label">کوچک</span>
+                            <span class="level-btn-xp">+30</span>
+                        </div>
+                        <div class="level-btn" onclick="logHabit('namaz','special')" data-level="special">
+                            <div class="level-btn-dot" style="background:#F59E0B"></div>
+                            <span class="level-btn-label">ویژه</span>
+                            <span class="level-btn-xp">+20</span>
+                        </div>
+                        <div class="level-btn" onclick="logHabit('namaz','emergency')" data-level="emergency">
+                            <div class="level-btn-dot" style="background:#EF4444"></div>
+                            <span class="level-btn-label">اضطراری</span>
+                            <span class="level-btn-xp">+10</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Sleep -->
-                <div class="cell" id="habit-cell-sleep">
-                    <div class="cell-icon cell-icon-lg" style="background: #5ac8fa20">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#5ac8fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
-                        </svg>
-                    </div>
-                    <div class="cell-content">
-                        <div class="cell-title">خواب منظم</div>
-                        <div class="cell-subtitle" id="streak-sleep-text"></div>
-                    </div>
-                    <span id="habit-check-sleep"></span>
-                </div>
-                <div class="habit-levels" id="levels-sleep">
-                    <div class="level-btn" onclick="logHabit('sleep','small')" data-level="small">
-                        <div class="level-btn-icon">
-                            <svg viewBox="0 0 24 24" fill="#34c759" stroke="none"><circle cx="12" cy="12" r="8"/></svg>
+                <div class="habit-item" id="habit-sleep">
+                    <div class="habit-row">
+                        <div class="habit-icon-wrap" style="background:rgba(90,200,250,0.12)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#5AC8FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                            </svg>
                         </div>
-                        <span class="level-btn-label">کوچک</span>
-                        <span class="level-btn-xp">+30 XP</span>
-                    </div>
-                    <div class="level-btn" onclick="logHabit('sleep','special')" data-level="special">
-                        <div class="level-btn-icon">
-                            <svg viewBox="0 0 24 24" fill="#ff9500" stroke="none"><circle cx="12" cy="12" r="8"/></svg>
+                        <div class="habit-info">
+                            <div class="habit-name">خواب منظم</div>
+                            <div class="habit-streak" id="streak-sleep"></div>
                         </div>
-                        <span class="level-btn-label">ویژه</span>
-                        <span class="level-btn-xp">+20 XP</span>
-                    </div>
-                    <div class="level-btn" onclick="logHabit('sleep','emergency')" data-level="emergency">
-                        <div class="level-btn-icon">
-                            <svg viewBox="0 0 24 24" fill="#ff3b30" stroke="none"><circle cx="12" cy="12" r="8"/></svg>
+                        <div class="habit-check" id="check-sleep">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                         </div>
-                        <span class="level-btn-label">اضطراری</span>
-                        <span class="level-btn-xp">+10 XP</span>
+                    </div>
+                    <div class="habit-levels" id="levels-sleep">
+                        <div class="level-btn" onclick="logHabit('sleep','small')" data-level="small">
+                            <div class="level-btn-dot" style="background:#22C55E"></div>
+                            <span class="level-btn-label">کوچک</span>
+                            <span class="level-btn-xp">+30</span>
+                        </div>
+                        <div class="level-btn" onclick="logHabit('sleep','special')" data-level="special">
+                            <div class="level-btn-dot" style="background:#F59E0B"></div>
+                            <span class="level-btn-label">ویژه</span>
+                            <span class="level-btn-xp">+20</span>
+                        </div>
+                        <div class="level-btn" onclick="logHabit('sleep','emergency')" data-level="emergency">
+                            <div class="level-btn-dot" style="background:#EF4444"></div>
+                            <span class="level-btn-label">اضطراری</span>
+                            <span class="level-btn-xp">+10</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Exercise -->
-                <div class="cell" id="habit-cell-exercise">
-                    <div class="cell-icon cell-icon-lg" style="background: #ff2d5520">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff2d55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M6.5 6.5L17.5 17.5M6.5 17.5L17.5 6.5"/>
-                            <path d="M2 12h4M18 12h4M12 2v4M12 18v4"/>
-                        </svg>
-                    </div>
-                    <div class="cell-content">
-                        <div class="cell-title">ورزش</div>
-                        <div class="cell-subtitle" id="streak-exercise-text"></div>
-                    </div>
-                    <span id="habit-check-exercise"></span>
-                </div>
-                <div class="habit-levels" id="levels-exercise">
-                    <div class="level-btn" onclick="logHabit('exercise','small')" data-level="small">
-                        <div class="level-btn-icon">
-                            <svg viewBox="0 0 24 24" fill="#34c759" stroke="none"><circle cx="12" cy="12" r="8"/></svg>
+                <div class="habit-item" id="habit-exercise">
+                    <div class="habit-row">
+                        <div class="habit-icon-wrap" style="background:rgba(255,45,85,0.12)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#FF2D55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/>
+                                <line x1="6" y1="1" x2="6" y2="4"/>
+                                <line x1="10" y1="1" x2="10" y2="4"/>
+                                <line x1="14" y1="1" x2="14" y2="4"/>
+                            </svg>
                         </div>
-                        <span class="level-btn-label">کوچک</span>
-                        <span class="level-btn-xp">+30 XP</span>
-                    </div>
-                    <div class="level-btn" onclick="logHabit('exercise','special')" data-level="special">
-                        <div class="level-btn-icon">
-                            <svg viewBox="0 0 24 24" fill="#ff9500" stroke="none"><circle cx="12" cy="12" r="8"/></svg>
+                        <div class="habit-info">
+                            <div class="habit-name">ورزش</div>
+                            <div class="habit-streak" id="streak-exercise"></div>
                         </div>
-                        <span class="level-btn-label">ویژه</span>
-                        <span class="level-btn-xp">+20 XP</span>
-                    </div>
-                    <div class="level-btn" onclick="logHabit('exercise','emergency')" data-level="emergency">
-                        <div class="level-btn-icon">
-                            <svg viewBox="0 0 24 24" fill="#ff3b30" stroke="none"><circle cx="12" cy="12" r="8"/></svg>
+                        <div class="habit-check" id="check-exercise">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                         </div>
-                        <span class="level-btn-label">اضطراری</span>
-                        <span class="level-btn-xp">+10 XP</span>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Course Section -->
-        <div class="section">
-            <div class="section-header">دوره آموزشی</div>
-            <div class="section-body">
-                <div class="cell">
-                    <div class="cell-icon cell-icon-lg" style="background: #007aff20">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
-                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
-                            <line x1="10" y1="8" x2="16" y2="8"/>
-                            <line x1="10" y1="12" x2="14" y2="12"/>
-                        </svg>
+                    <div class="habit-levels" id="levels-exercise">
+                        <div class="level-btn" onclick="logHabit('exercise','small')" data-level="small">
+                            <div class="level-btn-dot" style="background:#22C55E"></div>
+                            <span class="level-btn-label">کوچک</span>
+                            <span class="level-btn-xp">+30</span>
+                        </div>
+                        <div class="level-btn" onclick="logHabit('exercise','special')" data-level="special">
+                            <div class="level-btn-dot" style="background:#F59E0B"></div>
+                            <span class="level-btn-label">ویژه</span>
+                            <span class="level-btn-xp">+20</span>
+                        </div>
+                        <div class="level-btn" onclick="logHabit('exercise','emergency')" data-level="emergency">
+                            <div class="level-btn-dot" style="background:#EF4444"></div>
+                            <span class="level-btn-label">اضطراری</span>
+                            <span class="level-btn-xp">+10</span>
+                        </div>
                     </div>
-                    <div class="cell-content">
-                        <div class="cell-title" id="courseTitle">دوره آموزشی</div>
-                        <div class="cell-subtitle" id="courseSession">جلسه ۱ | چهله ۱</div>
-                    </div>
-                    <button class="tg-button tg-button-sm" id="courseBtn" onclick="logCourse()" style="width:auto">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px">
-                            <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                        ثبت
-                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Challenge Banner -->
+        <!-- Course -->
+        <div class="course-card">
+            <div class="course-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                </svg>
+            </div>
+            <div class="course-info">
+                <div class="course-title">دوره آموزشی</div>
+                <div class="course-sub" id="courseSession">جلسه ۱ | چهله ۱</div>
+            </div>
+            <button class="course-btn" id="courseBtn" onclick="logCourse()">ثبت</button>
+        </div>
+
+        <!-- Challenge -->
         <div class="challenge-banner" id="challengeCard">
-            <div class="challenge-title" id="challengeText">در حال بارگذاری...</div>
-            <div class="challenge-reward" id="challengeReward"></div>
-            <div class="challenge-status" id="challengeStatus"></div>
+            <div class="challenge-label">چالش روز</div>
+            <div class="challenge-text" id="challengeText">در حال بارگذاری...</div>
+            <div class="challenge-footer">
+                <span class="challenge-reward" id="challengeReward"></span>
+                <span class="challenge-status" id="challengeStatus"></span>
+            </div>
         </div>
 
-        <!-- Journal Section -->
-        <div class="section">
-            <div class="section-header">تحلیل شبانه</div>
-            <div class="journal-section">
-                <div class="mood-row">
-                    <button class="mood-btn" onclick="selectMood(5)" data-mood="5">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                    </button>
-                    <button class="mood-btn" onclick="selectMood(4)" data-mood="4">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 1 4 1 4-1 4-1"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                    </button>
-                    <button class="mood-btn" onclick="selectMood(3)" data-mood="3">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff9500" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                    </button>
-                    <button class="mood-btn" onclick="selectMood(2)" data-mood="2">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff3b30" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
-                    </button>
-                    <button class="mood-btn" onclick="selectMood(1)" data-mood="1">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/><line x1="4" y1="4" x2="6" y2="6"/></svg>
-                    </button>
-                </div>
-                <textarea class="journal-textarea" id="journalText" placeholder="هرچی از دلت میاد بنویس..."></textarea>
-                <div style="margin-top:10px">
-                    <button class="tg-button" onclick="saveJournal()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px">
-                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                        </svg>
-                        ثبت تحلیل (+15 XP)
-                    </button>
-                </div>
+        <!-- Journal -->
+        <div class="journal-card">
+            <div class="journal-title">تحلیل شبانه</div>
+            <div class="mood-row">
+                <button class="mood-btn" onclick="selectMood(5)" data-mood="5">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                </button>
+                <button class="mood-btn" onclick="selectMood(4)" data-mood="4">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#2AABEE" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 1 4 1 4-1 4-1"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                </button>
+                <button class="mood-btn" onclick="selectMood(3)" data-mood="3">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                </button>
+                <button class="mood-btn" onclick="selectMood(2)" data-mood="2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                </button>
+                <button class="mood-btn" onclick="selectMood(1)" data-mood="1">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                </button>
             </div>
+            <textarea class="journal-textarea" id="journalText" placeholder="امروز چطور بود؟ بنویس..."></textarea>
+            <button class="journal-submit" onclick="saveJournal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                ثبت تحلیل
+            </button>
         </div>
     </div>
 
     <!-- ═══════════════ Stats Page ═══════════════ -->
     <div class="page" id="page-stats">
-
-        <div class="stat-grid">
+        <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-value" id="statPercent">0%</div>
                 <div class="stat-label">درصد انجام</div>
@@ -1113,22 +1323,15 @@
             </div>
         </div>
 
-        <div class="section">
-            <div class="section-header">نمودار هفتگی</div>
-            <div class="section-body">
-                <div class="chart-container" id="weeklyChart"></div>
-            </div>
+        <div class="chart-card">
+            <div class="chart-title">نمودار هفتگی</div>
+            <div class="chart-bars" id="weeklyChart"></div>
         </div>
 
         <div class="section">
             <div class="section-header">تقویم ماهانه</div>
-            <div class="section-body">
+            <div class="section-card">
                 <div class="calendar-grid" id="calendarGrid"></div>
-                <div style="padding:8px 16px 12px;font-size:12px;color:var(--tg-theme-hint-color);display:flex;gap:12px;justify-content:center">
-                    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:#34c759;display:inline-block"></span> کامل</span>
-                    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:#ff9500;display:inline-block"></span> ناقص</span>
-                    <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:var(--tg-theme-secondary-bg-color);display:inline-block"></span> خالی</span>
-                </div>
             </div>
         </div>
     </div>
@@ -1137,7 +1340,7 @@
     <div class="page" id="page-journey">
         <div class="section">
             <div class="section-header">نقشه سفر ۹ چهله</div>
-            <div class="section-body" id="journeyPath"></div>
+            <div class="section-card" id="journeyPath"></div>
         </div>
     </div>
 
@@ -1151,41 +1354,29 @@
 
     <!-- ═══════════════ More Page ═══════════════ -->
     <div class="page" id="page-more">
-
-        <!-- Dhikr -->
-        <div class="section">
-            <div class="section-header">ذکر امروز</div>
-            <div class="section-body">
-                <div class="dhikr-section">
-                    <div class="dhikr-arabic" id="dhikrArabic">در حال بارگذاری...</div>
-                    <div class="dhikr-meaning" id="dhikrMeaning"></div>
-                    <div class="dhikr-count" id="dhikrCount"></div>
-                </div>
-            </div>
+        <div class="dhikr-card">
+            <div class="dhikr-arabic" id="dhikrArabic">در حال بارگذاری...</div>
+            <div class="dhikr-meaning" id="dhikrMeaning"></div>
+            <div class="dhikr-count" id="dhikrCount"></div>
         </div>
 
-        <!-- Hadith -->
-        <div class="section">
-            <div class="section-header">حدیث روز</div>
-            <div class="section-body">
-                <div style="padding:16px;font-size:15px;line-height:1.8;color:var(--tg-theme-text-color)" id="hadithText"></div>
-            </div>
+        <div class="hadith-card">
+            <div class="hadith-label">حدیث روز</div>
+            <div class="hadith-text" id="hadithText"></div>
         </div>
 
-        <!-- Streaks -->
         <div class="section">
             <div class="section-header">استریک‌ها</div>
-            <div class="section-body" id="streaksDetail"></div>
+            <div class="section-card" id="streaksDetail"></div>
         </div>
 
-        <!-- Shop -->
         <div class="section">
             <div class="section-header">فروشگاه</div>
-            <div class="section-body" id="shopItems"></div>
+            <div class="section-card" id="shopItems"></div>
         </div>
     </div>
 
-    <!-- ═══════════════ Bottom Tab Bar ═══════════════ -->
+    <!-- ═══════════════ Tab Bar ═══════════════ -->
     <div class="tab-bar">
         <div class="tab-item active" onclick="switchPage('today', this)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1219,8 +1410,7 @@
         </div>
         <div class="tab-item" onclick="switchPage('more', this)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+                <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
             </svg>
             <span class="tab-label">بیشتر</span>
         </div>
@@ -1230,72 +1420,30 @@
          JavaScript
     ═══════════════════════════════════════════════════════════════════ -->
     <script>
-        // ═══════════════════════════════════════════════════════════════════
-        // Telegram WebApp Init
-        // ═══════════════════════════════════════════════════════════════════
-
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
         tg.enableClosingConfirmation();
+        tg.setHeaderColor('#0E0F11');
+        tg.setBackgroundColor('#0E0F11');
 
         const user = tg.initDataUnsafe?.user;
         const userId = user?.id || 0;
         const API_BASE = '/api';
 
-        let appData = {
-            habits: {},
-            course: null,
-            challenge: null,
-            xp: 0,
-            level: 1,
-            achievements: [],
-            stats: {},
-            journey: {},
-            shop: [],
-            dhikr: {},
-            mood: 0,
-        };
+        let appData = { habits: {}, course: null, challenge: null, xp: 0, level: 1, mood: 0 };
 
-        // ═══════════════════════════════════════════════════════════════════
-        // SVG Icon helpers
-        // ═══════════════════════════════════════════════════════════════════
+        // Set today date
+        const now = new Date();
+        const persianDate = now.toLocaleDateString('fa-IR', { weekday: 'long', month: 'long', day: 'numeric' });
+        document.getElementById('todayDate').textContent = persianDate;
 
-        const SVG = {
-            check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;color:var(--tg-theme-button-color)"><polyline points="20 6 9 17 4 12"/></svg>`,
-            fire: `<svg viewBox="0 0 24 24" fill="#ff6b35" stroke="none" style="width:14px;height:14px"><path d="M12 2c.5 3.5-1.5 6-1.5 6s2.5.5 3.5 3c.7 1.7.3 3.5-.5 5 2.5-1 4-3.5 4-6.5 0-4.5-3.5-7-5.5-7.5zM10 16c0 1.5 1 2.5 2.5 2.5S15 17.5 15 16s-1-3-2.5-4.5C11 13 10 14.5 10 16z"/></svg>`,
-            lock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;color:var(--tg-theme-hint-color)"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`,
-        };
-
-        const LEVEL_ICONS = {
-            1: { color: '#34c759', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#34c759" stroke-width="2"><path d="M12 22c-4-3-8-7-8-12a8 8 0 0116 0c0 5-4 9-8 12z"/><path d="M12 8v4M10 12h4"/></svg>` },
-            2: { color: '#5ac8fa', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#5ac8fa" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg>` },
-            3: { color: '#007aff', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>` },
-            4: { color: '#5856d6', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#5856d6" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>` },
-            5: { color: '#ff9500', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#ff9500" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>` },
-            6: { color: '#ff2d55', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#ff2d55" stroke-width="2"><path d="M6 3h12l4 6-10 13L2 9z"/></svg>` },
-            7: { color: '#af52de', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#af52de" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>` },
-            8: { color: '#ffcc00', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#ffcc00" stroke-width="2"><path d="M2 4l3 12h14l3-12M5 16l-2 4h18l-2-4M12 2v4"/><circle cx="12" cy="10" r="3"/></svg>` },
-            9: { color: '#ff3b30', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#ff3b30" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>` },
-            10: { color: '#ffcc00', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#ffcc00" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>` },
-        };
-
-        // ═══════════════════════════════════════════════════════════════════
-        // API Helpers
-        // ═══════════════════════════════════════════════════════════════════
-
+        // ═══════════════════ API ═══════════════════
         async function api(endpoint, method = 'GET', body = null) {
             try {
-                const opts = {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                };
+                const opts = { method, headers: { 'Content-Type': 'application/json' } };
                 if (body) opts.body = JSON.stringify({ ...body, user_id: userId });
-
-                const url = method === 'GET' && userId
-                    ? `${API_BASE}${endpoint}?user_id=${userId}`
-                    : `${API_BASE}${endpoint}`;
-
+                const url = method === 'GET' ? `${API_BASE}${endpoint}?user_id=${userId}` : `${API_BASE}${endpoint}`;
                 const res = await fetch(url, opts);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 return await res.json();
@@ -1305,126 +1453,101 @@
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Page Navigation
-        // ═══════════════════════════════════════════════════════════════════
-
+        // ═══════════════════ Navigation ═══════════════════
         function switchPage(page, el) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-item').forEach(n => n.classList.remove('active'));
-
             document.getElementById(`page-${page}`).classList.add('active');
             if (el) el.classList.add('active');
-
-            // Haptic feedback
             if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
-
-            // Load page data
             if (page === 'stats') loadStats();
             else if (page === 'journey') loadJourney();
             else if (page === 'achievements') loadAchievements();
             else if (page === 'more') loadMore();
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Toast
-        // ═══════════════════════════════════════════════════════════════════
-
+        // ═══════════════════ Toast ═══════════════════
         function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2500);
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Today Page
-        // ═══════════════════════════════════════════════════════════════════
-
+        // ═══════════════════ Today ═══════════════════
         async function loadToday() {
             const data = await api('/today');
             if (!data) return;
-
             appData = { ...appData, ...data };
 
-            // Update XP bar
-            updateXPBar(data.xp, data.level_info);
+            // XP Hero
+            document.getElementById('heroXP').textContent = data.xp;
+            document.getElementById('heroLevelName').textContent = data.level_info?.name || 'تازه‌کار';
+            document.getElementById('heroLevelSub').textContent = `سطح ${data.level_info?.level || 1}`;
+            document.getElementById('heroProgressFill').style.width = `${data.level_info?.progress || 0}%`;
+            document.getElementById('heroProgressCurrent').textContent = `${data.xp} XP`;
+            if (data.level_info?.next_level) {
+                document.getElementById('heroProgressNext').textContent = `${data.level_info.next_level.xp_needed} XP`;
+            } else {
+                document.getElementById('heroProgressNext').textContent = 'MAX';
+            }
 
-            // Update habits
-            for (const key of ['namaz', 'sleep', 'exercise']) {
+            // Habits
+            ['namaz', 'sleep', 'exercise'].forEach(key => {
                 const habit = data.habits[key];
-                const checkEl = document.getElementById(`habit-check-${key}`);
+                const checkEl = document.getElementById(`check-${key}`);
                 const levelsEl = document.getElementById(`levels-${key}`);
 
                 if (habit) {
-                    checkEl.innerHTML = SVG.check;
+                    checkEl.classList.add('visible');
                     levelsEl.querySelectorAll('.level-btn').forEach(btn => {
                         btn.classList.toggle('selected', btn.dataset.level === habit.level);
                     });
                 } else {
-                    checkEl.innerHTML = '';
+                    checkEl.classList.remove('visible');
                     levelsEl.querySelectorAll('.level-btn').forEach(btn => btn.classList.remove('selected'));
                 }
 
-                // Streak
                 const streak = data.streaks[key]?.current || 0;
-                const streakEl = document.getElementById(`streak-${key}-text`);
+                const streakEl = document.getElementById(`streak-${key}`);
                 if (streak > 0) {
-                    streakEl.innerHTML = `<span class="streak-pill">${SVG.fire} ${streak} روز</span>`;
+                    streakEl.innerHTML = `<svg viewBox="0 0 24 24" fill="#F97316" stroke="none"><path d="M12 2c.5 3.5-1.5 6-1.5 6s2.5.5 3.5 3c.7 1.7.3 3.5-.5 5 2.5-1 4-3.5 4-6.5 0-4.5-3.5-7-5.5-7.5z"/></svg> ${streak} روز`;
                 } else {
                     streakEl.textContent = '';
                 }
-            }
+            });
 
             // Course
             const courseBtn = document.getElementById('courseBtn');
             if (data.course) {
+                courseBtn.textContent = 'انجام شد';
                 courseBtn.classList.add('done');
-                courseBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polyline points="20 6 9 17 4 12"/></svg> انجام شد`;
             } else {
+                courseBtn.textContent = 'ثبت';
                 courseBtn.classList.remove('done');
-                courseBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><polyline points="20 6 9 17 4 12"/></svg> ثبت`;
             }
-            document.getElementById('courseSession').textContent =
-                `جلسه ${data.course_session} | چهله ${data.course_chelle}`;
+            document.getElementById('courseSession').textContent = `جلسه ${data.course_session} | چهله ${data.course_chelle}`;
 
             // Challenge
             if (data.challenge) {
                 document.getElementById('challengeText').textContent = data.challenge.text;
                 document.getElementById('challengeReward').textContent = `+${data.challenge.xp} XP`;
-                document.getElementById('challengeStatus').textContent =
-                    data.challenge_done ? '✅ انجام شد!' : '⬜ انجام نشده';
-            }
-        }
-
-        function updateXPBar(xp, levelInfo) {
-            if (!levelInfo) return;
-
-            // Update level icon
-            const iconData = LEVEL_ICONS[levelInfo.level] || LEVEL_ICONS[1];
-            document.getElementById('levelIcon').innerHTML = iconData.svg;
-
-            document.getElementById('levelName').textContent = `${levelInfo.name} — سطح ${levelInfo.level}`;
-            document.getElementById('xpBarFill').style.width = `${levelInfo.progress}%`;
-            document.getElementById('xpTotal').textContent = `${xp} XP`;
-
-            if (levelInfo.next_level) {
-                document.getElementById('xpText').textContent =
-                    `${xp} / ${levelInfo.next_level.xp_needed} XP`;
-            } else {
-                document.getElementById('xpText').textContent = 'حداکثر سطح!';
-            }
-        }
-
-        async function logHabit(habitKey, level) {
-            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-            const data = await api('/habit', 'POST', { habit_key: habitKey, level });
-            if (data) {
-                if (data.action === 'removed') {
-                    showToast('↩️ لغو شد');
+                const statusEl = document.getElementById('challengeStatus');
+                if (data.challenge_done) {
+                    statusEl.textContent = 'انجام شد';
+                    statusEl.classList.add('done');
                 } else {
-                    showToast(`+${data.xp_earned} XP`);
+                    statusEl.textContent = 'در انتظار';
+                    statusEl.classList.remove('done');
                 }
+            }
+        }
+
+        async function logHabit(key, level) {
+            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+            const data = await api('/habit', 'POST', { habit_key: key, level });
+            if (data) {
+                showToast(data.action === 'removed' ? '↩️ لغو شد' : `+${data.xp_earned} XP`);
                 loadToday();
             }
         }
@@ -1433,26 +1556,20 @@
             if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
             const data = await api('/course', 'POST');
             if (data) {
-                showToast(data.logged ? `+${data.xp_earned} XP — دوره ثبت شد` : '↩️ لغو شد');
+                showToast(data.logged ? `+${data.xp_earned} XP` : '↩️ لغو شد');
                 loadToday();
             }
         }
 
         function selectMood(score) {
             appData.mood = score;
-            document.querySelectorAll('.mood-btn').forEach(btn => {
-                btn.classList.toggle('selected', btn.dataset.mood == score);
-            });
+            document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.toggle('selected', btn.dataset.mood == score));
             if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
         }
 
         async function saveJournal() {
             const content = document.getElementById('journalText').value.trim();
-            if (!content) {
-                showToast('یه چیزی بنویس!');
-                return;
-            }
-
+            if (!content) { showToast('یه چیزی بنویس!'); return; }
             if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
             const data = await api('/journal', 'POST', { content, mood: appData.mood });
             if (data) {
@@ -1462,247 +1579,154 @@
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Stats Page
-        // ═══════════════════════════════════════════════════════════════════
-
+        // ═══════════════════ Stats ═══════════════════
         async function loadStats() {
             const data = await api('/stats');
             if (!data) return;
-
             document.getElementById('statPercent').textContent = `${data.percentage}%`;
             document.getElementById('statPerfect').textContent = data.perfect_days;
             document.getElementById('statCourse').textContent = data.course_days;
             document.getElementById('statXP').textContent = data.xp_earned;
 
-            // Weekly chart
             const chart = document.getElementById('weeklyChart');
             chart.innerHTML = '';
             const days = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
-
             if (data.daily) {
                 data.daily.forEach((d, i) => {
                     const pct = (d.done / 3) * 100;
-                    chart.innerHTML += `
-                        <div class="chart-col">
-                            <div class="chart-bar" style="height:${Math.max(pct, 5)}%"></div>
-                            <span class="chart-label">${days[i % 7]}</span>
-                        </div>`;
+                    chart.innerHTML += `<div class="chart-col"><div class="chart-bar" style="height:${Math.max(pct, 5)}%"></div><span class="chart-day">${days[i % 7]}</span></div>`;
                 });
             }
 
-            // Calendar
             const cal = document.getElementById('calendarGrid');
             cal.innerHTML = '';
             if (data.calendar) {
                 data.calendar.forEach(day => {
-                    const cls = day.done === 3 ? 'perfect' :
-                                day.done > 0 ? 'partial' : 'empty';
+                    const cls = day.done === 3 ? 'perfect' : day.done > 0 ? 'partial' : 'empty';
                     const today = day.is_today ? ' today' : '';
-                    const icon = day.done === 3
-                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`
-                        : day.done > 0
-                            ? `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>`
-                            : '';
+                    const icon = day.done === 3 ? `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>` : '';
                     cal.innerHTML += `<div class="cal-cell ${cls}${today}">${icon}</div>`;
                 });
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Journey Page
-        // ═══════════════════════════════════════════════════════════════════
-
+        // ═══════════════════ Journey ═══════════════════
         async function loadJourney() {
             const data = await api('/journey');
             if (!data) return;
-
             const path = document.getElementById('journeyPath');
             path.innerHTML = '';
 
-            const milestones = [
-                { chelle: 1, name: 'آغاز سفر', color: '#34c759' },
-                { chelle: 2, name: 'مسیر ادامه', color: '#5ac8fa' },
-                { chelle: 3, name: 'استقامت', color: '#007aff' },
-                { chelle: 4, name: 'بلوغ', color: '#5856d6' },
-                { chelle: 5, name: 'تسلط', color: '#ff9500' },
-                { chelle: 6, name: 'قدرت', color: '#ff2d55' },
-                { chelle: 7, name: 'حکمت', color: '#af52de' },
-                { chelle: 8, name: 'استادی', color: '#ffcc00' },
-                { chelle: 9, name: 'عادت‌ساز', color: '#ff3b30' },
+            const ms = [
+                { chelle: 1, name: 'آغاز سفر', color: '#22C55E' },
+                { chelle: 2, name: 'مسیر ادامه', color: '#5AC8FA' },
+                { chelle: 3, name: 'استقامت', color: '#2AABEE' },
+                { chelle: 4, name: 'بلوغ', color: '#5856D6' },
+                { chelle: 5, name: 'تسلط', color: '#F59E0B' },
+                { chelle: 6, name: 'قدرت', color: '#FF2D55' },
+                { chelle: 7, name: 'حکمت', color: '#AF52DE' },
+                { chelle: 8, name: 'استادی', color: '#FFCC00' },
+                { chelle: 9, name: 'عادت‌ساز', color: '#EF4444' },
             ];
 
-            milestones.forEach(m => {
-                let cls = '';
-                let desc = '';
-                let progressHTML = '';
-
-                if (m.chelle < data.current_chelle) {
-                    cls = 'completed';
-                    desc = 'تکمیل شده';
-                } else if (m.chelle === data.current_chelle) {
-                    cls = 'current';
-                    desc = `در حال انجام — ${data.progress_pct}%`;
-                    progressHTML = `<div class="journey-progress"><div class="journey-progress-fill" style="width:${data.progress_pct}%"></div></div>`;
-                } else {
-                    cls = 'locked';
-                    desc = 'قفل';
-                }
-
-                const iconBg = cls === 'locked' ? 'var(--tg-theme-secondary-bg-color)' : m.color + '20';
-                const iconStroke = cls === 'locked' ? 'var(--tg-theme-hint-color)' : m.color;
+            ms.forEach(m => {
+                let cls = m.chelle < data.current_chelle ? 'completed' : m.chelle === data.current_chelle ? 'current' : 'locked';
+                let desc = cls === 'completed' ? 'تکمیل شده' : cls === 'current' ? `${data.progress_pct}% انجام شده` : 'قفل';
+                let progress = cls === 'current' ? `<div class="journey-progress"><div class="journey-progress-fill" style="width:${data.progress_pct}%"></div></div>` : '';
 
                 path.innerHTML += `
-                    <div class="journey-node ${cls}">
-                        <div class="journey-icon" style="background:${iconBg}">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="${iconStroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                ${cls === 'locked'
-                                    ? '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>'
-                                    : cls === 'completed'
-                                        ? '<polyline points="20 6 9 17 4 12"/>'
-                                        : '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'
-                                }
+                    <div class="journey-item ${cls}">
+                        <div class="journey-icon" style="background:${m.color}18">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="${m.color}" stroke-width="2" stroke-linecap="round">
+                                ${cls === 'locked' ? '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>' : cls === 'completed' ? '<polyline points="20 6 9 17 4 12"/>' : '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'}
                             </svg>
                         </div>
                         <div class="journey-info">
                             <div class="journey-name">چهله ${m.chelle}: ${m.name}</div>
                             <div class="journey-desc">${desc}</div>
-                            ${progressHTML}
+                            ${progress}
                         </div>
                     </div>`;
             });
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Achievements Page
-        // ═══════════════════════════════════════════════════════════════════
-
+        // ═══════════════════ Achievements ═══════════════════
         async function loadAchievements() {
             const data = await api('/achievements');
             if (!data) return;
-
             const grid = document.getElementById('achGrid');
             grid.innerHTML = '';
 
-            const allAchs = [
-                { key: 'first_habit', name: 'شروع', color: '#34c759', icon: '<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' },
-                { key: 'streak_3', name: '۳ روزه', color: '#ff6b35', icon: '<path d="M12 2c.5 3.5-1.5 6-1.5 6s2.5.5 3.5 3c.7 1.7.3 3.5-.5 5 2.5-1 4-3.5 4-6.5 0-4.5-3.5-7-5.5-7.5z"/>' },
-                { key: 'streak_7', name: 'هفته‌ای', color: '#ff6b35', icon: '<path d="M12 2c.5 3.5-1.5 6-1.5 6s2.5.5 3.5 3c.7 1.7.3 3.5-.5 5 2.5-1 4-3.5 4-6.5 0-4.5-3.5-7-5.5-7.5z"/>' },
-                { key: 'streak_14', name: '۲ هفته', color: '#ff9500', icon: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>' },
-                { key: 'streak_21', name: '۳ هفته', color: '#ff9500', icon: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>' },
-                { key: 'streak_30', name: 'ماهانه', color: '#5856d6', icon: '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>' },
-                { key: 'streak_40', name: 'چهله', color: '#af52de', icon: '<circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>' },
-                { key: 'streak_66', name: 'عادت‌ساز', color: '#ff2d55', icon: '<path d="M12 2a10 10 0 0110 10 10 10 0 01-10 10A10 10 0 012 12 10 10 0 0112 2z"/><path d="M12 6v6l4 2"/>' },
-                { key: 'perfect_1', name: 'روز کامل', color: '#ffcc00', icon: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>' },
-                { key: 'perfect_7', name: 'هفته طلایی', color: '#ffcc00', icon: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>' },
-                { key: 'perfect_30', name: 'ماه درخشان', color: '#ff9500', icon: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>' },
-                { key: 'course_7', name: 'دانش‌آموز', color: '#007aff', icon: '<path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>' },
-                { key: 'course_30', name: 'دانشجو', color: '#007aff', icon: '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>' },
-                { key: 'course_chelle', name: 'فارغ‌التحصیل', color: '#5856d6', icon: '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 7 3 10 0v-5"/>' },
-                { key: 'first_journal', name: 'تحلیل‌گر', color: '#5ac8fa', icon: '<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>' },
-                { key: 'comeback', name: 'برگشت', color: '#34c759', icon: '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>' },
-                { key: 'early_bird', name: 'سحرخیز', color: '#ff9500', icon: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>' },
-                { key: 'night_owl', name: 'جغد شب', color: '#5856d6', icon: '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>' },
-                { key: 'emergency_hero', name: 'قهرمان', color: '#ff2d55', icon: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>' },
+            const achs = [
+                { key: 'first_habit', name: 'شروع', color: '#22C55E', d: '<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' },
+                { key: 'streak_3', name: '۳ روزه', color: '#F97316', d: '<path d="M12 2c.5 3.5-1.5 6-1.5 6s2.5.5 3.5 3c.7 1.7.3 3.5-.5 5 2.5-1 4-3.5 4-6.5 0-4.5-3.5-7-5.5-7.5z"/>' },
+                { key: 'streak_7', name: 'هفته‌ای', color: '#F97316', d: '<path d="M12 2c.5 3.5-1.5 6-1.5 6s2.5.5 3.5 3c.7 1.7.3 3.5-.5 5 2.5-1 4-3.5 4-6.5 0-4.5-3.5-7-5.5-7.5z"/>' },
+                { key: 'streak_14', name: '۲ هفته', color: '#F59E0B', d: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>' },
+                { key: 'streak_21', name: '۳ هفته', color: '#F59E0B', d: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>' },
+                { key: 'streak_30', name: 'ماهانه', color: '#5856D6', d: '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>' },
+                { key: 'streak_40', name: 'چهله', color: '#AF52DE', d: '<circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>' },
+                { key: 'streak_66', name: 'عادت‌ساز', color: '#FF2D55', d: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>' },
+                { key: 'perfect_1', name: 'روز کامل', color: '#FFCC00', d: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>' },
+                { key: 'perfect_7', name: 'هفته طلایی', color: '#FFCC00', d: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>' },
+                { key: 'perfect_30', name: 'ماه درخشان', color: '#FF9500', d: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>' },
+                { key: 'course_7', name: 'دانش‌آموز', color: '#2AABEE', d: '<path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>' },
+                { key: 'course_30', name: 'دانشجو', color: '#2AABEE', d: '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>' },
+                { key: 'course_chelle', name: 'فارغ‌التحصیل', color: '#5856D6', d: '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 7 3 10 0v-5"/>' },
+                { key: 'first_journal', name: 'تحلیل‌گر', color: '#5AC8FA', d: '<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>' },
+                { key: 'comeback', name: 'برگشت', color: '#22C55E', d: '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>' },
+                { key: 'early_bird', name: 'سحرخیز', color: '#FF9500', d: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>' },
+                { key: 'night_owl', name: 'جغد شب', color: '#5856D6', d: '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>' },
+                { key: 'emergency_hero', name: 'قهرمان', color: '#FF2D55', d: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>' },
             ];
 
             const unlocked = new Set(data.unlocked || []);
-
-            allAchs.forEach(ach => {
-                const cls = unlocked.has(ach.key) ? '' : 'locked';
-                grid.innerHTML += `
-                    <div class="ach-item ${cls}">
-                        <div class="ach-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="${ach.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ach.icon}</svg>
-                        </div>
-                        <div class="ach-name">${ach.name}</div>
-                    </div>`;
+            achs.forEach(a => {
+                grid.innerHTML += `<div class="ach-item ${unlocked.has(a.key) ? '' : 'locked'}"><div class="ach-icon"><svg viewBox="0 0 24 24" fill="none" stroke="${a.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${a.d}</svg></div><div class="ach-name">${a.name}</div></div>`;
             });
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // More Page
-        // ═══════════════════════════════════════════════════════════════════
-
+        // ═══════════════════ More ═══════════════════
         async function loadMore() {
-            // Dhikr
             const dhikr = await api('/dhikr');
             if (dhikr) {
                 document.getElementById('dhikrArabic').textContent = dhikr.text;
                 document.getElementById('dhikrMeaning').textContent = dhikr.meaning;
-                document.getElementById('dhikrCount').textContent = `تعداد: ${dhikr.count}`;
+                document.getElementById('dhikrCount').textContent = `تکرار: ${dhikr.count}`;
                 document.getElementById('hadithText').textContent = dhikr.hadith;
             }
 
-            // Streaks
             const stats = await api('/stats');
-            if (stats && stats.streaks) {
+            if (stats?.streaks) {
                 const el = document.getElementById('streaksDetail');
                 el.innerHTML = '';
-                const habits = [
-                    { key: 'namaz', name: 'تمرکز در نماز', color: '#5856d6' },
-                    { key: 'sleep', name: 'خواب منظم', color: '#5ac8fa' },
-                    { key: 'exercise', name: 'ورزش', color: '#ff2d55' },
-                ];
-                habits.forEach(h => {
+                [{ key: 'namaz', name: 'تمرکز در نماز', color: '#5856D6' }, { key: 'sleep', name: 'خواب منظم', color: '#5AC8FA' }, { key: 'exercise', name: 'ورزش', color: '#FF2D55' }].forEach(h => {
                     const s = stats.streaks[h.key] || { current: 0, best: 0 };
-                    el.innerHTML += `
-                        <div class="cell">
-                            <div class="cell-icon" style="background:${h.color}20">
-                                <svg viewBox="0 0 24 24" fill="${h.color}" stroke="none" style="width:16px;height:16px">
-                                    <path d="M12 2c.5 3.5-1.5 6-1.5 6s2.5.5 3.5 3c.7 1.7.3 3.5-.5 5 2.5-1 4-3.5 4-6.5 0-4.5-3.5-7-5.5-7.5z"/>
-                                </svg>
-                            </div>
-                            <div class="cell-content">
-                                <div class="cell-title">${h.name}</div>
-                                <div class="cell-subtitle">بهترین: ${s.best} روز</div>
-                            </div>
-                            <div class="cell-badge">${s.current} روز</div>
-                        </div>`;
+                    el.innerHTML += `<div class="streak-item"><div class="streak-icon" style="background:${h.color}18"><svg viewBox="0 0 24 24" fill="${h.color}" stroke="none"><path d="M12 2c.5 3.5-1.5 6-1.5 6s2.5.5 3.5 3c.7 1.7.3 3.5-.5 5 2.5-1 4-3.5 4-6.5 0-4.5-3.5-7-5.5-7.5z"/></svg></div><div class="streak-info"><div class="streak-name">${h.name}</div><div class="streak-best">بهترین: ${s.best} روز</div></div><div class="streak-badge">${s.current}</div></div>`;
                 });
             }
 
-            // Shop
             const shop = await api('/shop');
             if (shop) {
                 const el = document.getElementById('shopItems');
                 el.innerHTML = '';
                 shop.items.forEach(item => {
                     const canBuy = shop.xp >= item.cost;
-                    el.innerHTML += `
-                        <div class="shop-item">
-                            <div class="shop-info">
-                                <div class="shop-name">${item.name}</div>
-                                <div class="shop-cost">${item.cost} XP</div>
-                            </div>
-                            <button class="shop-buy-btn" ${canBuy ? '' : 'disabled'} onclick="buyItem('${item.id}')">
-                                ${canBuy ? 'خرید' : 'قفل'}
-                            </button>
-                        </div>`;
+                    el.innerHTML += `<div class="shop-item"><div class="shop-info"><div class="shop-name">${item.name}</div><div class="shop-cost">${item.cost} XP</div></div><button class="shop-buy" ${canBuy ? '' : 'disabled'} onclick="buyItem('${item.id}')">${canBuy ? 'خرید' : 'قفل'}</button></div>`;
                 });
             }
         }
 
-        async function buyItem(itemId) {
+        async function buyItem(id) {
             if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
-            const data = await api('/buy', 'POST', { item_id: itemId });
-            if (data && data.success) {
-                showToast('خرید موفق!');
-                loadMore();
-                loadToday();
-            } else {
-                showToast('XP کافی نیست!');
-            }
+            const data = await api('/buy', 'POST', { item_id: id });
+            if (data?.success) { showToast('خرید موفق!'); loadMore(); loadToday(); }
+            else showToast('XP کافی نیست');
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Initialize
-        // ═══════════════════════════════════════════════════════════════════
-
+        // ═══════════════════ Init ═══════════════════
         window.addEventListener('load', () => {
             if (!userId) {
-                document.querySelector('.page.active').innerHTML =
-                    '<div class="empty-state">لطفاً از طریق تلگرام باز کنید.</div>';
+                document.querySelector('.page.active').innerHTML = '<div class="empty-state">لطفاً از طریق تلگرام باز کنید</div>';
                 return;
             }
             loadToday();
