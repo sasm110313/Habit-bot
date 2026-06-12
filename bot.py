@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""
+🎯 Habit Tracker Bot v3.0 — Main Entry Point
+ربات پیشرفته عادت‌سازی
+
+Features:
+- ۳ عادت ثابت با ۳ سطح (لقمه کوچک/ویژه/اضطراری)
+- سیستم XP + لول + دستاوردها
+- ۹ چهله دوره آموزشی
+- یادآوری هوشمند (فقط تا وقتی انجام نشده)
+- تحلیل/ژورنال شبانه
+- آیه قرآن صبحگاهی
+- استریک با رکوردشکنی
+- آمار هفتگی و کلی
+"""
+
+import sys
+import logging
+from datetime import time
+
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    CallbackQueryHandler,
+    MessageHandler,
+    filters,
+)
+
+from config import (
+    BOT_TOKEN,
+    HABITS,
+    MORNING_MOTIVATION_TIME,
+    COURSE_REMINDER_TIMES,
+    HABIT_REMINDER_TIMES,
+    JOURNAL_REMINDER_TIME,
+    SUMMARY_TIME,
+)
+from db import Database
+from gamification import Gamification
+from handlers import (
+    cmd_start,
+    cmd_help,
+    cmd_pause,
+    cmd_resume,
+    cmd_setsession,
+    cmd_mystats,
+    cmd_journal,
+    show_today,
+    show_course,
+    show_stats,
+    show_achievements,
+    show_streaks,
+    show_journal,
+    callback_handler,
+    handle_text,
+)
+from reminders import (
+    job_morning_motivation,
+    job_course_reminder,
+    job_habit_reminder,
+    job_journal_reminder,
+    job_daily_summary,
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Logging
+# ─────────────────────────────────────────────────────────────────────────────
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
+logger = logging.getLogger(__name__)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def main():
+    if not BOT_TOKEN:
+        print("❌ Error: TELEGRAM_BOT_TOKEN not set!")
+        print("   export TELEGRAM_BOT_TOKEN='your-token'")
+        sys.exit(1)
+
+    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print("🎯 Habit Tracker Bot v3.0")
+    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+    # Initialize database and gamification
+    db = Database()
+    gm = Gamification(db)
+
+    print(f"📂 Database: {db.db_path}")
+    print(f"🕌 Habits: نماز | خواب | ورزش")
+    print(f"🎮 Gamification: 10 levels, {len(HABITS)} habits")
+
+    # Build application
+    app = Application.builder().token(BOT_TOKEN).build()
+
+    # Store shared instances in bot_data
+    app.bot_data["db"] = db
+    app.bot_data["gamification"] = gm
+
+    # ── Command Handlers ─────────────────────────────────────────────────
+    app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("help", cmd_help))
+    app.add_handler(CommandHandler("habits", show_today))
+    app.add_handler(CommandHandler("today", show_today))
+    app.add_handler(CommandHandler("course", show_course))
+    app.add_handler(CommandHandler("stats", show_stats))
+    app.add_handler(CommandHandler("mystats", cmd_mystats))
+    app.add_handler(CommandHandler("achievements", show_achievements))
+    app.add_handler(CommandHandler("streaks", show_streaks))
+    app.add_handler(CommandHandler("journal", cmd_journal))
+    app.add_handler(CommandHandler("setsession", cmd_setsession))
+    app.add_handler(CommandHandler("pause", cmd_pause))
+    app.add_handler(CommandHandler("resume", cmd_resume))
+
+    # ── Callback Query Handler ───────────────────────────────────────────
+    app.add_handler(CallbackQueryHandler(callback_handler))
+
+    # ── Text Message Handler ─────────────────────────────────────────────
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+
+    # ── Scheduled Jobs ───────────────────────────────────────────────────
+    job_queue = app.job_queue
+
+    # Morning motivation with Quran verse
+    h, m = MORNING_MOTIVATION_TIME
+    job_queue.run_daily(job_morning_motivation, time=time(hour=h, minute=m), name="morning")
+    print(f"  🌅 Morning motivation: {h:02d}:{m:02d}")
+
+    # Course reminders (multiple per day)
+    for h, m in COURSE_REMINDER_TIMES:
+        job_queue.run_daily(
+            job_course_reminder,
+            time=time(hour=h, minute=m),
+            name=f"course_{h:02d}{m:02d}",
+        )
+    print(f"  📚 Course reminders: {', '.join(f'{h:02d}:{m:02d}' for h, m in COURSE_REMINDER_TIMES)}")
+
+    # Habit reminders (multiple per day)
+    for h, m in HABIT_REMINDER_TIMES:
+        job_queue.run_daily(
+            job_habit_reminder,
+            time=time(hour=h, minute=m),
+            name=f"habit_{h:02d}{m:02d}",
+        )
+    print(f"  💪 Habit reminders: {', '.join(f'{h:02d}:{m:02d}' for h, m in HABIT_REMINDER_TIMES)}")
+
+    # Journal reminder
+    h, m = JOURNAL_REMINDER_TIME
+    job_queue.run_daily(job_journal_reminder, time=time(hour=h, minute=m), name="journal")
+    print(f"  📝 Journal reminder: {h:02d}:{m:02d}")
+
+    # Daily summary
+    h, m = SUMMARY_TIME
+    job_queue.run_daily(job_daily_summary, time=time(hour=h, minute=m), name="summary")
+    print(f"  🌙 Daily summary: {h:02d}:{m:02d}")
+
+    # ── Start ────────────────────────────────────────────────────────────
+    print("")
+    print("✅ Bot running! Press Ctrl+C to stop.")
+    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+    app.run_polling(allowed_updates=["message", "callback_query"], drop_pending_updates=True)
+
+
+if __name__ == "__main__":
+    main()
