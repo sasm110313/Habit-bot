@@ -3,10 +3,13 @@
 ماژول دیتابیس
 """
 
+import logging
 import sqlite3
 from datetime import datetime, timedelta
 from typing import Optional
 from config import DB_PATH, HABIT_ORDER
+
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -26,6 +29,25 @@ class Database:
     def _init_db(self):
         conn = self._conn()
         try:
+            # ── Check if old v2 database needs migration ─────────────────
+            try:
+                conn.execute("SELECT xp FROM users LIMIT 1")
+            except sqlite3.OperationalError:
+                # Old database or first run - drop incompatible tables
+                conn.executescript("""
+                    DROP TABLE IF EXISTS users;
+                    DROP TABLE IF EXISTS habits;
+                    DROP TABLE IF EXISTS habit_logs;
+                    DROP TABLE IF EXISTS reminders;
+                    DROP TABLE IF EXISTS course_progress;
+                    DROP TABLE IF EXISTS streaks;
+                    DROP TABLE IF EXISTS course_logs;
+                    DROP TABLE IF EXISTS achievements;
+                    DROP TABLE IF EXISTS journals;
+                    DROP TABLE IF EXISTS xp_logs;
+                """)
+                conn.commit()
+
             conn.executescript("""
                 -- کاربران
                 CREATE TABLE IF NOT EXISTS users (
