@@ -3,1113 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#050507">
     <title>عادت‌ساز</title>
+
+    <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Inter Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        /* ═══════════════════════════════════════════════════════════════════
-           Telegram 2025 Premium Dark UI
-           Inspired by TON Wallet / Telegram Premium aesthetic
-           Glassmorphism + Dark Mode + Native App Feel
-        ═══════════════════════════════════════════════════════════════════ */
 
-        :root {
-            --bg-primary: #0E0F11;
-            --bg-surface: #17181C;
-            --bg-elevated: #1F2025;
-            --bg-glass: rgba(31, 32, 37, 0.7);
-            --accent: #2AABEE;
-            --accent-secondary: #0098EA;
-            --accent-glow: rgba(42, 171, 238, 0.15);
-            --accent-glow-strong: rgba(42, 171, 238, 0.3);
-            --success: #22C55E;
-            --success-glow: rgba(34, 197, 94, 0.15);
-            --warning: #F59E0B;
-            --warning-glow: rgba(245, 158, 11, 0.15);
-            --danger: #EF4444;
-            --danger-glow: rgba(239, 68, 68, 0.15);
-            --text-primary: #FFFFFF;
-            --text-secondary: #A1A1AA;
-            --text-tertiary: #71717A;
-            --border: rgba(255, 255, 255, 0.06);
-            --border-light: rgba(255, 255, 255, 0.1);
-            --radius-sm: 12px;
-            --radius-md: 16px;
-            --radius-lg: 20px;
-            --radius-xl: 24px;
-            --radius-full: 9999px;
-            --safe-bottom: env(safe-area-inset-bottom, 0px);
-            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-            --shadow-glow: 0 0 20px var(--accent-glow);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            direction: rtl;
-            min-height: 100vh;
-            padding-bottom: calc(80px + var(--safe-bottom));
-            overflow-x: hidden;
-            font-size: 15px;
-            line-height: 1.5;
-            letter-spacing: -0.01em;
-        }
-
-        /* ═══════════════════ Animations ═══════════════════ */
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-
-        @keyframes glow {
-            0%, 100% { box-shadow: 0 0 20px var(--accent-glow); }
-            50% { box-shadow: 0 0 40px var(--accent-glow-strong); }
-        }
-
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        .animate-in {
-            animation: fadeUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-        }
-
-        .skeleton {
-            background: linear-gradient(90deg, var(--bg-elevated) 25%, var(--bg-surface) 50%, var(--bg-elevated) 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-            border-radius: var(--radius-sm);
-        }
-
-        /* ═══════════════════ Header ═══════════════════ */
-        .app-header {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            padding: 16px 20px;
-            background: rgba(14, 15, 17, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border);
-        }
-
-        .header-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .header-title {
-            font-size: 18px;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-        }
-
-        .header-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .header-badge svg {
-            width: 16px;
-            height: 16px;
-            color: var(--accent);
-        }
-
-        /* ═══════════════════ Hero XP Card ═══════════════════ */
-        .hero-card {
-            margin: 16px 16px 20px;
-            padding: 24px;
-            border-radius: var(--radius-xl);
-            background: linear-gradient(135deg, #1a2332 0%, #0f1923 50%, #1a1f2e 100%);
-            background-size: 200% 200%;
-            animation: gradientShift 8s ease infinite;
-            border: 1px solid var(--border-light);
-            position: relative;
-            overflow: hidden;
-            box-shadow: var(--shadow-lg), 0 0 60px rgba(42, 171, 238, 0.05);
-        }
-
-        .hero-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .hero-level-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-            position: relative;
-        }
-
-        .hero-level-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: var(--accent-glow);
-            border: 2px solid var(--accent);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 20px var(--accent-glow);
-        }
-
-        .hero-level-icon svg {
-            width: 24px;
-            height: 24px;
-            color: var(--accent);
-        }
-
-        .hero-level-info {
-            flex: 1;
-        }
-
-        .hero-level-name {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .hero-level-sub {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
-
-        .hero-xp-display {
-            text-align: center;
-            position: relative;
-            margin-bottom: 16px;
-        }
-
-        .hero-xp-value {
-            font-size: 42px;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-xp-label {
-            font-size: 14px;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
-
-        .hero-progress {
-            position: relative;
-        }
-
-        .hero-progress-bar {
-            height: 6px;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: var(--radius-full);
-            overflow: hidden;
-        }
-
-        .hero-progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-secondary), var(--accent));
-            border-radius: var(--radius-full);
-            transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            box-shadow: 0 0 10px var(--accent-glow);
-        }
-
-        .hero-progress-text {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 8px;
-            font-size: 12px;
-            color: var(--text-tertiary);
-        }
-
-        /* ═══════════════════ Pages ═══════════════════ */
-        .page {
-            display: none;
-            padding: 0 0 20px;
-        }
-
-        .page.active {
-            display: block;
-            animation: fadeUp 0.3s ease;
-        }
-
-        /* ═══════════════════ Section ═══════════════════ */
-        .section {
-            margin-bottom: 20px;
-        }
-
-        .section-header {
-            padding: 0 20px 10px;
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--text-tertiary);
-        }
-
-        .section-card {
-            margin: 0 16px;
-            background: var(--bg-surface);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            overflow: hidden;
-        }
-
-        /* ═══════════════════ Habit Cards ═══════════════════ */
-        .habit-item {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .habit-item:last-child {
-            border-bottom: none;
-        }
-
-        .habit-row {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-bottom: 12px;
-        }
-
-        .habit-icon-wrap {
-            width: 44px;
-            height: 44px;
-            border-radius: var(--radius-sm);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .habit-icon-wrap svg {
-            width: 22px;
-            height: 22px;
-        }
-
-        .habit-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .habit-name {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .habit-streak {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            margin-top: 3px;
-            font-size: 13px;
-            color: #F97316;
-            font-weight: 500;
-        }
-
-        .habit-streak svg {
-            width: 14px;
-            height: 14px;
-        }
-
-        .habit-check {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: var(--success);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transform: scale(0.5);
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .habit-check.visible {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        .habit-check svg {
-            width: 16px;
-            height: 16px;
-            color: #fff;
-        }
-
-        .habit-levels {
-            display: flex;
-            gap: 8px;
-        }
-
-        .level-btn {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            padding: 12px 8px;
-            background: var(--bg-elevated);
-            border: 1.5px solid var(--border);
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            -webkit-user-select: none;
-            user-select: none;
-        }
-
-        .level-btn:active {
-            transform: scale(0.95);
-        }
-
-        .level-btn-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-        }
-
-        .level-btn-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-        }
-
-        .level-btn-xp {
-            font-size: 11px;
-            color: var(--text-tertiary);
-        }
-
-        .level-btn.selected {
-            border-color: var(--accent);
-            background: var(--accent-glow);
-            box-shadow: 0 0 16px var(--accent-glow);
-        }
-
-        .level-btn.selected .level-btn-label {
-            color: var(--accent);
-        }
-
-        /* ═══════════════════ Course Card ═══════════════════ */
-        .course-card {
-            margin: 0 16px 20px;
-            padding: 18px 20px;
-            background: var(--bg-surface);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
-        .course-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: var(--radius-sm);
-            background: rgba(0, 122, 255, 0.12);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .course-icon svg {
-            width: 22px;
-            height: 22px;
-            color: #007AFF;
-        }
-
-        .course-info {
-            flex: 1;
-        }
-
-        .course-title {
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .course-sub {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-top: 2px;
-        }
-
-        .course-btn {
-            padding: 10px 18px;
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: var(--radius-full);
-            font-size: 14px;
-            font-weight: 600;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-
-        .course-btn:active {
-            transform: scale(0.94);
-            opacity: 0.85;
-        }
-
-        .course-btn.done {
-            background: var(--success);
-        }
-
-        /* ═══════════════════ Challenge Banner ═══════════════════ */
-        .challenge-banner {
-            margin: 0 16px 20px;
-            padding: 20px;
-            border-radius: var(--radius-lg);
-            background: linear-gradient(135deg, rgba(42, 171, 238, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
-            border: 1px solid rgba(42, 171, 238, 0.2);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .challenge-banner::before {
-            content: '';
-            position: absolute;
-            top: -30px;
-            left: -30px;
-            width: 80px;
-            height: 80px;
-            background: radial-gradient(circle, rgba(42, 171, 238, 0.3), transparent);
-            border-radius: 50%;
-        }
-
-        .challenge-label {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--accent);
-            margin-bottom: 8px;
-        }
-
-        .challenge-text {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--text-primary);
-            line-height: 1.5;
-            margin-bottom: 10px;
-        }
-
-        .challenge-footer {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .challenge-reward {
-            font-size: 13px;
-            color: var(--accent);
-            font-weight: 600;
-        }
-
-        .challenge-status {
-            font-size: 13px;
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: var(--radius-full);
-            background: var(--bg-elevated);
-        }
-
-        .challenge-status.done {
-            background: var(--success-glow);
-            color: var(--success);
-        }
-
-        /* ═══════════════════ Journal ═══════════════════ */
-        .journal-card {
-            margin: 0 16px 20px;
-            padding: 20px;
-            background: var(--bg-surface);
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-        }
-
-        .journal-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 14px;
-        }
-
-        .mood-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 14px;
-        }
-
-        .mood-btn {
-            flex: 1;
-            height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg-elevated);
-            border: 1.5px solid var(--border);
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .mood-btn:active {
-            transform: scale(0.93);
-        }
-
-        .mood-btn svg {
-            width: 22px;
-            height: 22px;
-        }
-
-        .mood-btn.selected {
-            border-color: var(--accent);
-            background: var(--accent-glow);
-            box-shadow: 0 0 12px var(--accent-glow);
-        }
-
-        .journal-textarea {
-            width: 100%;
-            min-height: 80px;
-            padding: 14px 16px;
-            background: var(--bg-elevated);
-            border: 1.5px solid var(--border);
-            border-radius: var(--radius-md);
-            color: var(--text-primary);
-            font-size: 15px;
-            font-family: inherit;
-            direction: rtl;
-            resize: none;
-            outline: none;
-            transition: border-color 0.2s ease;
-            line-height: 1.5;
-        }
-
-        .journal-textarea:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-glow);
-        }
-
-        .journal-textarea::placeholder {
-            color: var(--text-tertiary);
-        }
-
-        .journal-submit {
-            margin-top: 12px;
-            width: 100%;
-            padding: 14px;
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: var(--radius-md);
-            font-size: 15px;
-            font-weight: 600;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .journal-submit:active {
-            transform: scale(0.97);
-            opacity: 0.85;
-        }
-
-        .journal-submit svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        /* ═══════════════════ Stats Page ═══════════════════ */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin: 0 16px 20px;
-        }
-
-        .stat-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 18px 16px;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            color: var(--accent);
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: var(--text-tertiary);
-            margin-top: 4px;
-            font-weight: 500;
-        }
-
-        /* Chart */
-        .chart-card {
-            margin: 0 16px 20px;
-            padding: 20px;
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-        }
-
-        .chart-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 16px;
-        }
-
-        .chart-bars {
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            height: 100px;
-            gap: 8px;
-        }
-
-        .chart-col {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            height: 100%;
-            justify-content: flex-end;
-        }
-
-        .chart-bar {
-            width: 100%;
-            max-width: 28px;
-            border-radius: 6px 6px 0 0;
-            background: linear-gradient(180deg, var(--accent), var(--accent-secondary));
-            min-height: 4px;
-            transition: height 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            opacity: 0.85;
-        }
-
-        .chart-day {
-            font-size: 11px;
-            color: var(--text-tertiary);
-            font-weight: 500;
-        }
-
-        /* Calendar */
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
-            padding: 16px;
-        }
-
-        .cal-cell {
-            aspect-ratio: 1;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .cal-cell.perfect { background: var(--success); }
-        .cal-cell.partial { background: var(--warning); }
-        .cal-cell.empty { background: var(--bg-elevated); }
-        .cal-cell.today { box-shadow: inset 0 0 0 2px var(--accent); }
-
-        .cal-cell svg { width: 12px; height: 12px; color: #fff; }
-
-        /* ═══════════════════ Journey ═══════════════════ */
-        .journey-item {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-            transition: opacity 0.2s;
-        }
-
-        .journey-item:last-child { border-bottom: none; }
-        .journey-item.locked { opacity: 0.35; }
-        .journey-item.completed { opacity: 0.6; }
-
-        .journey-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .journey-icon svg { width: 20px; height: 20px; }
-
-        .journey-info { flex: 1; }
-
-        .journey-name {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .journey-desc {
-            font-size: 13px;
-            color: var(--text-tertiary);
-            margin-top: 2px;
-        }
-
-        .journey-progress {
-            height: 4px;
-            background: var(--bg-elevated);
-            border-radius: var(--radius-full);
-            margin-top: 8px;
-            overflow: hidden;
-        }
-
-        .journey-progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-secondary), var(--accent));
-            border-radius: var(--radius-full);
-            box-shadow: 0 0 8px var(--accent-glow);
-        }
-
-        /* ═══════════════════ Achievements ═══════════════════ */
-        .ach-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            padding: 0 16px;
-        }
-
-        .ach-item {
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 18px 10px;
-            text-align: center;
-            transition: all 0.2s ease;
-        }
-
-        .ach-item.locked { opacity: 0.25; }
-
-        .ach-icon {
-            width: 36px;
-            height: 36px;
-            margin: 0 auto 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .ach-icon svg { width: 30px; height: 30px; }
-
-        .ach-name {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-secondary);
-        }
-
-        /* ═══════════════════ More Page ═══════════════════ */
-        .dhikr-card {
-            margin: 0 16px 20px;
-            padding: 28px 20px;
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            text-align: center;
-        }
-
-        .dhikr-arabic {
-            font-size: 22px;
-            font-weight: 700;
-            line-height: 2;
-            color: var(--text-primary);
-            margin-bottom: 12px;
-        }
-
-        .dhikr-meaning {
-            font-size: 14px;
-            color: var(--text-secondary);
-            line-height: 1.7;
-            margin-bottom: 10px;
-        }
-
-        .dhikr-count {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--accent);
-        }
-
-        .hadith-card {
-            margin: 0 16px 20px;
-            padding: 20px;
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-        }
-
-        .hadith-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-tertiary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 10px;
-        }
-
-        .hadith-text {
-            font-size: 14px;
-            line-height: 1.8;
-            color: var(--text-secondary);
-        }
-
-        /* Streaks */
-        .streak-item {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 14px 20px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .streak-item:last-child { border-bottom: none; }
-
-        .streak-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .streak-icon svg { width: 18px; height: 18px; }
-
-        .streak-info { flex: 1; }
-
-        .streak-name {
-            font-size: 15px;
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .streak-best {
-            font-size: 12px;
-            color: var(--text-tertiary);
-            margin-top: 2px;
-        }
-
-        .streak-badge {
-            padding: 4px 10px;
-            background: rgba(249, 115, 22, 0.12);
-            color: #F97316;
-            border-radius: var(--radius-full);
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        /* Shop */
-        .shop-item {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 14px 20px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .shop-item:last-child { border-bottom: none; }
-
-        .shop-info { flex: 1; }
-
-        .shop-name {
-            font-size: 15px;
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .shop-cost {
-            font-size: 13px;
-            color: var(--text-tertiary);
-            margin-top: 2px;
-        }
-
-        .shop-buy {
-            padding: 8px 16px;
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: var(--radius-full);
-            font-size: 13px;
-            font-weight: 600;
-            font-family: inherit;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .shop-buy:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-
-        .shop-buy:active:not(:disabled) {
-            transform: scale(0.94);
-        }
-
-        /* ═══════════════════ Bottom Tab Bar ═══════════════════ */
-        .tab-bar {
-            position: fixed;
-            bottom: 16px;
-            left: 16px;
-            right: 16px;
-            padding-bottom: var(--safe-bottom);
-            display: flex;
-            background: rgba(23, 24, 28, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-full);
-            padding: 8px 6px;
-            z-index: 200;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .tab-item {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 3px;
-            padding: 8px 0;
-            cursor: pointer;
-            -webkit-user-select: none;
-            user-select: none;
-            transition: all 0.2s ease;
-            color: var(--text-tertiary);
-            text-decoration: none;
-            border-radius: var(--radius-full);
-        }
-
-        .tab-item.active {
-            color: var(--accent);
-            background: var(--accent-glow);
-        }
-
-        .tab-item svg {
-            width: 22px;
-            height: 22px;
-        }
-
-        .tab-label {
-            font-size: 10px;
-            font-weight: 600;
-        }
-
-        /* ═══════════════════ Toast ═══════════════════ */
-        .toast {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-100px);
-            background: var(--bg-elevated);
-            color: var(--text-primary);
-            padding: 12px 24px;
-            border-radius: var(--radius-full);
-            font-size: 14px;
-            font-weight: 600;
-            z-index: 1000;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            white-space: nowrap;
-            border: 1px solid var(--border-light);
-            box-shadow: var(--shadow-lg);
-            backdrop-filter: blur(10px);
-        }
-
-        .toast.show {
-            transform: translateX(-50%) translateY(0);
-        }
-
-        /* ═══════════════════ Empty / Loading ═══════════════════ */
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-tertiary);
-            font-size: 15px;
-        }
-    </style>
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/components.css">
 </head>
 <body>
-    <!-- Toast -->
+
+    <!-- Toast Notification -->
     <div class="toast" id="toast"></div>
 
-    <!-- Header -->
+    <!-- ═══════════════ App Header ═══════════════ -->
     <div class="app-header">
         <div class="header-content">
-            <div class="header-badge">
+            <div class="header-brand">
                 <span class="header-title">عادت‌ساز</span>
-                <svg viewBox="0 0 24 24" fill="var(--accent)" stroke="none">
+                <svg class="header-badge" viewBox="0 0 24 24" fill="var(--accent)" stroke="none">
                     <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
             </div>
-            <div style="font-size:13px;color:var(--text-tertiary);font-weight:500" id="todayDate"></div>
+            <div class="header-date" id="todayDate"></div>
         </div>
     </div>
 
-    <!-- ═══════════════ Today Page ═══════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════
+         TODAY PAGE
+    ═══════════════════════════════════════════════════════════════ -->
     <div class="page active" id="page-today">
 
         <!-- Hero XP Card -->
         <div class="hero-card">
             <div class="hero-level-row">
                 <div class="hero-level-icon" id="heroLevelIcon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                     </svg>
                 </div>
@@ -1133,7 +70,7 @@
             </div>
         </div>
 
-        <!-- Habits -->
+        <!-- Habits Section -->
         <div class="section">
             <div class="section-header">عادت‌های امروز</div>
             <div class="section-card">
@@ -1141,7 +78,7 @@
                 <!-- Namaz -->
                 <div class="habit-item" id="habit-namaz">
                     <div class="habit-row">
-                        <div class="habit-icon-wrap" style="background:rgba(88,86,214,0.12)">
+                        <div class="habit-icon-wrap" style="background:rgba(88,86,214,0.1)">
                             <svg viewBox="0 0 24 24" fill="none" stroke="#5856D6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M12 22c5-4 8-8 8-12a8 8 0 00-16 0c0 4 3 8 8 12z"/>
                                 <circle cx="12" cy="10" r="3"/>
@@ -1157,17 +94,17 @@
                     </div>
                     <div class="habit-levels" id="levels-namaz">
                         <div class="level-btn" onclick="logHabit('namaz','small')" data-level="small">
-                            <div class="level-btn-dot" style="background:#22C55E"></div>
+                            <div class="level-btn-dot" style="background:#10B981;box-shadow:0 0 8px rgba(16,185,129,0.4)"></div>
                             <span class="level-btn-label">کوچک</span>
                             <span class="level-btn-xp">+30</span>
                         </div>
                         <div class="level-btn" onclick="logHabit('namaz','special')" data-level="special">
-                            <div class="level-btn-dot" style="background:#F59E0B"></div>
+                            <div class="level-btn-dot" style="background:#F59E0B;box-shadow:0 0 8px rgba(245,158,11,0.4)"></div>
                             <span class="level-btn-label">ویژه</span>
                             <span class="level-btn-xp">+20</span>
                         </div>
                         <div class="level-btn" onclick="logHabit('namaz','emergency')" data-level="emergency">
-                            <div class="level-btn-dot" style="background:#EF4444"></div>
+                            <div class="level-btn-dot" style="background:#EF4444;box-shadow:0 0 8px rgba(239,68,68,0.4)"></div>
                             <span class="level-btn-label">اضطراری</span>
                             <span class="level-btn-xp">+10</span>
                         </div>
@@ -1177,7 +114,7 @@
                 <!-- Sleep -->
                 <div class="habit-item" id="habit-sleep">
                     <div class="habit-row">
-                        <div class="habit-icon-wrap" style="background:rgba(90,200,250,0.12)">
+                        <div class="habit-icon-wrap" style="background:rgba(90,200,250,0.1)">
                             <svg viewBox="0 0 24 24" fill="none" stroke="#5AC8FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
                             </svg>
@@ -1192,17 +129,17 @@
                     </div>
                     <div class="habit-levels" id="levels-sleep">
                         <div class="level-btn" onclick="logHabit('sleep','small')" data-level="small">
-                            <div class="level-btn-dot" style="background:#22C55E"></div>
+                            <div class="level-btn-dot" style="background:#10B981;box-shadow:0 0 8px rgba(16,185,129,0.4)"></div>
                             <span class="level-btn-label">کوچک</span>
                             <span class="level-btn-xp">+30</span>
                         </div>
                         <div class="level-btn" onclick="logHabit('sleep','special')" data-level="special">
-                            <div class="level-btn-dot" style="background:#F59E0B"></div>
+                            <div class="level-btn-dot" style="background:#F59E0B;box-shadow:0 0 8px rgba(245,158,11,0.4)"></div>
                             <span class="level-btn-label">ویژه</span>
                             <span class="level-btn-xp">+20</span>
                         </div>
                         <div class="level-btn" onclick="logHabit('sleep','emergency')" data-level="emergency">
-                            <div class="level-btn-dot" style="background:#EF4444"></div>
+                            <div class="level-btn-dot" style="background:#EF4444;box-shadow:0 0 8px rgba(239,68,68,0.4)"></div>
                             <span class="level-btn-label">اضطراری</span>
                             <span class="level-btn-xp">+10</span>
                         </div>
@@ -1212,9 +149,10 @@
                 <!-- Exercise -->
                 <div class="habit-item" id="habit-exercise">
                     <div class="habit-row">
-                        <div class="habit-icon-wrap" style="background:rgba(255,45,85,0.12)">
+                        <div class="habit-icon-wrap" style="background:rgba(255,45,85,0.1)">
                             <svg viewBox="0 0 24 24" fill="none" stroke="#FF2D55" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/>
+                                <path d="M18 8h1a4 4 0 010 8h-1"/>
+                                <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/>
                                 <line x1="6" y1="1" x2="6" y2="4"/>
                                 <line x1="10" y1="1" x2="10" y2="4"/>
                                 <line x1="14" y1="1" x2="14" y2="4"/>
@@ -1230,26 +168,27 @@
                     </div>
                     <div class="habit-levels" id="levels-exercise">
                         <div class="level-btn" onclick="logHabit('exercise','small')" data-level="small">
-                            <div class="level-btn-dot" style="background:#22C55E"></div>
+                            <div class="level-btn-dot" style="background:#10B981;box-shadow:0 0 8px rgba(16,185,129,0.4)"></div>
                             <span class="level-btn-label">کوچک</span>
                             <span class="level-btn-xp">+30</span>
                         </div>
                         <div class="level-btn" onclick="logHabit('exercise','special')" data-level="special">
-                            <div class="level-btn-dot" style="background:#F59E0B"></div>
+                            <div class="level-btn-dot" style="background:#F59E0B;box-shadow:0 0 8px rgba(245,158,11,0.4)"></div>
                             <span class="level-btn-label">ویژه</span>
                             <span class="level-btn-xp">+20</span>
                         </div>
                         <div class="level-btn" onclick="logHabit('exercise','emergency')" data-level="emergency">
-                            <div class="level-btn-dot" style="background:#EF4444"></div>
+                            <div class="level-btn-dot" style="background:#EF4444;box-shadow:0 0 8px rgba(239,68,68,0.4)"></div>
                             <span class="level-btn-label">اضطراری</span>
                             <span class="level-btn-xp">+10</span>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
 
-        <!-- Course -->
+        <!-- Course Card -->
         <div class="course-card">
             <div class="course-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1264,7 +203,7 @@
             <button class="course-btn" id="courseBtn" onclick="logCourse()">ثبت</button>
         </div>
 
-        <!-- Challenge -->
+        <!-- Challenge Banner -->
         <div class="challenge-banner" id="challengeCard">
             <div class="challenge-label">چالش روز</div>
             <div class="challenge-text" id="challengeText">در حال بارگذاری...</div>
@@ -1279,30 +218,35 @@
             <div class="journal-title">تحلیل شبانه</div>
             <div class="mood-row">
                 <button class="mood-btn" onclick="selectMood(5)" data-mood="5">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                 </button>
                 <button class="mood-btn" onclick="selectMood(4)" data-mood="4">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#2AABEE" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 1 4 1 4-1 4-1"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#2AABEE" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 13s1.5 1 4 1 4-1 4-1"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                 </button>
                 <button class="mood-btn" onclick="selectMood(3)" data-mood="3">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                 </button>
                 <button class="mood-btn" onclick="selectMood(2)" data-mood="2">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                 </button>
                 <button class="mood-btn" onclick="selectMood(1)" data-mood="1">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#71717A" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
                 </button>
             </div>
             <textarea class="journal-textarea" id="journalText" placeholder="امروز چطور بود؟ بنویس..."></textarea>
-            <button class="journal-submit" onclick="saveJournal()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <button class="btn-glass btn-accent btn-block" onclick="saveJournal()" style="margin-top:12px">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
                 ثبت تحلیل
             </button>
         </div>
     </div>
 
-    <!-- ═══════════════ Stats Page ═══════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════
+         STATS PAGE
+    ═══════════════════════════════════════════════════════════════ -->
     <div class="page" id="page-stats">
         <div class="stats-grid">
             <div class="stat-card">
@@ -1336,7 +280,9 @@
         </div>
     </div>
 
-    <!-- ═══════════════ Journey Page ═══════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════
+         JOURNEY PAGE
+    ═══════════════════════════════════════════════════════════════ -->
     <div class="page" id="page-journey">
         <div class="section">
             <div class="section-header">نقشه سفر ۹ چهله</div>
@@ -1344,7 +290,9 @@
         </div>
     </div>
 
-    <!-- ═══════════════ Achievements Page ═══════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════
+         ACHIEVEMENTS PAGE
+    ═══════════════════════════════════════════════════════════════ -->
     <div class="page" id="page-achievements">
         <div class="section">
             <div class="section-header">دستاوردها</div>
@@ -1352,31 +300,40 @@
         <div class="ach-grid" id="achGrid"></div>
     </div>
 
-    <!-- ═══════════════ More Page ═══════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════
+         MORE PAGE
+    ═══════════════════════════════════════════════════════════════ -->
     <div class="page" id="page-more">
+
+        <!-- Dhikr -->
         <div class="dhikr-card">
             <div class="dhikr-arabic" id="dhikrArabic">در حال بارگذاری...</div>
             <div class="dhikr-meaning" id="dhikrMeaning"></div>
             <div class="dhikr-count" id="dhikrCount"></div>
         </div>
 
+        <!-- Hadith -->
         <div class="hadith-card">
             <div class="hadith-label">حدیث روز</div>
             <div class="hadith-text" id="hadithText"></div>
         </div>
 
+        <!-- Streaks -->
         <div class="section">
             <div class="section-header">استریک‌ها</div>
             <div class="section-card" id="streaksDetail"></div>
         </div>
 
+        <!-- Shop -->
         <div class="section">
             <div class="section-header">فروشگاه</div>
             <div class="section-card" id="shopItems"></div>
         </div>
     </div>
 
-    <!-- ═══════════════ Tab Bar ═══════════════ -->
+    <!-- ═══════════════════════════════════════════════════════════════
+         FLOATING TAB BAR
+    ═══════════════════════════════════════════════════════════════ -->
     <div class="tab-bar">
         <div class="tab-item active" onclick="switchPage('today', this)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1416,321 +373,10 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════════
-         JavaScript
-    ═══════════════════════════════════════════════════════════════════ -->
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-        tg.enableClosingConfirmation();
-        tg.setHeaderColor('#0E0F11');
-        tg.setBackgroundColor('#0E0F11');
+    <!-- JavaScript (order matters: api first, then pages, then app) -->
+    <script src="js/api.js"></script>
+    <script src="js/pages.js"></script>
+    <script src="js/app.js"></script>
 
-        const user = tg.initDataUnsafe?.user;
-        const userId = user?.id || 0;
-        const API_BASE = '/api';
-
-        let appData = { habits: {}, course: null, challenge: null, xp: 0, level: 1, mood: 0 };
-
-        // Set today date
-        const now = new Date();
-        const persianDate = now.toLocaleDateString('fa-IR', { weekday: 'long', month: 'long', day: 'numeric' });
-        document.getElementById('todayDate').textContent = persianDate;
-
-        // ═══════════════════ API ═══════════════════
-        async function api(endpoint, method = 'GET', body = null) {
-            try {
-                const opts = { method, headers: { 'Content-Type': 'application/json' } };
-                if (body) opts.body = JSON.stringify({ ...body, user_id: userId });
-                const url = method === 'GET' ? `${API_BASE}${endpoint}?user_id=${userId}` : `${API_BASE}${endpoint}`;
-                const res = await fetch(url, opts);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                return await res.json();
-            } catch (e) {
-                console.error('API Error:', e);
-                return null;
-            }
-        }
-
-        // ═══════════════════ Navigation ═══════════════════
-        function switchPage(page, el) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.tab-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(`page-${page}`).classList.add('active');
-            if (el) el.classList.add('active');
-            if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
-            if (page === 'stats') loadStats();
-            else if (page === 'journey') loadJourney();
-            else if (page === 'achievements') loadAchievements();
-            else if (page === 'more') loadMore();
-        }
-
-        // ═══════════════════ Toast ═══════════════════
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.textContent = msg;
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 2500);
-        }
-
-        // ═══════════════════ Today ═══════════════════
-        async function loadToday() {
-            const data = await api('/today');
-            if (!data) return;
-            appData = { ...appData, ...data };
-
-            // XP Hero
-            document.getElementById('heroXP').textContent = data.xp;
-            document.getElementById('heroLevelName').textContent = data.level_info?.name || 'تازه‌کار';
-            document.getElementById('heroLevelSub').textContent = `سطح ${data.level_info?.level || 1}`;
-            document.getElementById('heroProgressFill').style.width = `${data.level_info?.progress || 0}%`;
-            document.getElementById('heroProgressCurrent').textContent = `${data.xp} XP`;
-            if (data.level_info?.next_level) {
-                document.getElementById('heroProgressNext').textContent = `${data.level_info.next_level.xp_needed} XP`;
-            } else {
-                document.getElementById('heroProgressNext').textContent = 'MAX';
-            }
-
-            // Habits
-            ['namaz', 'sleep', 'exercise'].forEach(key => {
-                const habit = data.habits[key];
-                const checkEl = document.getElementById(`check-${key}`);
-                const levelsEl = document.getElementById(`levels-${key}`);
-
-                if (habit) {
-                    checkEl.classList.add('visible');
-                    levelsEl.querySelectorAll('.level-btn').forEach(btn => {
-                        btn.classList.toggle('selected', btn.dataset.level === habit.level);
-                    });
-                } else {
-                    checkEl.classList.remove('visible');
-                    levelsEl.querySelectorAll('.level-btn').forEach(btn => btn.classList.remove('selected'));
-                }
-
-                const streak = data.streaks[key]?.current || 0;
-                const streakEl = document.getElementById(`streak-${key}`);
-                if (streak > 0) {
-                    streakEl.innerHTML = `<svg viewBox="0 0 24 24" fill="#F97316" stroke="none"><path d="M12 2c.5 3.5-1.5 6-1.5 6s2.5.5 3.5 3c.7 1.7.3 3.5-.5 5 2.5-1 4-3.5 4-6.5 0-4.5-3.5-7-5.5-7.5z"/></svg> ${streak} روز`;
-                } else {
-                    streakEl.textContent = '';
-                }
-            });
-
-            // Course
-            const courseBtn = document.getElementById('courseBtn');
-            if (data.course) {
-                courseBtn.textContent = 'انجام شد';
-                courseBtn.classList.add('done');
-            } else {
-                courseBtn.textContent = 'ثبت';
-                courseBtn.classList.remove('done');
-            }
-            document.getElementById('courseSession').textContent = `جلسه ${data.course_session} | چهله ${data.course_chelle}`;
-
-            // Challenge
-            if (data.challenge) {
-                document.getElementById('challengeText').textContent = data.challenge.text;
-                document.getElementById('challengeReward').textContent = `+${data.challenge.xp} XP`;
-                const statusEl = document.getElementById('challengeStatus');
-                if (data.challenge_done) {
-                    statusEl.textContent = 'انجام شد';
-                    statusEl.classList.add('done');
-                } else {
-                    statusEl.textContent = 'در انتظار';
-                    statusEl.classList.remove('done');
-                }
-            }
-        }
-
-        async function logHabit(key, level) {
-            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-            const data = await api('/habit', 'POST', { habit_key: key, level });
-            if (data) {
-                showToast(data.action === 'removed' ? '↩️ لغو شد' : `+${data.xp_earned} XP`);
-                loadToday();
-            }
-        }
-
-        async function logCourse() {
-            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-            const data = await api('/course', 'POST');
-            if (data) {
-                showToast(data.logged ? `+${data.xp_earned} XP` : '↩️ لغو شد');
-                loadToday();
-            }
-        }
-
-        function selectMood(score) {
-            appData.mood = score;
-            document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.toggle('selected', btn.dataset.mood == score));
-            if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
-        }
-
-        async function saveJournal() {
-            const content = document.getElementById('journalText').value.trim();
-            if (!content) { showToast('یه چیزی بنویس!'); return; }
-            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-            const data = await api('/journal', 'POST', { content, mood: appData.mood });
-            if (data) {
-                showToast(`+${data.xp_earned} XP — ثبت شد`);
-                document.getElementById('journalText').value = '';
-                document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('selected'));
-            }
-        }
-
-        // ═══════════════════ Stats ═══════════════════
-        async function loadStats() {
-            const data = await api('/stats');
-            if (!data) return;
-            document.getElementById('statPercent').textContent = `${data.percentage}%`;
-            document.getElementById('statPerfect').textContent = data.perfect_days;
-            document.getElementById('statCourse').textContent = data.course_days;
-            document.getElementById('statXP').textContent = data.xp_earned;
-
-            const chart = document.getElementById('weeklyChart');
-            chart.innerHTML = '';
-            const days = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
-            if (data.daily) {
-                data.daily.forEach((d, i) => {
-                    const pct = (d.done / 3) * 100;
-                    chart.innerHTML += `<div class="chart-col"><div class="chart-bar" style="height:${Math.max(pct, 5)}%"></div><span class="chart-day">${days[i % 7]}</span></div>`;
-                });
-            }
-
-            const cal = document.getElementById('calendarGrid');
-            cal.innerHTML = '';
-            if (data.calendar) {
-                data.calendar.forEach(day => {
-                    const cls = day.done === 3 ? 'perfect' : day.done > 0 ? 'partial' : 'empty';
-                    const today = day.is_today ? ' today' : '';
-                    const icon = day.done === 3 ? `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>` : '';
-                    cal.innerHTML += `<div class="cal-cell ${cls}${today}">${icon}</div>`;
-                });
-            }
-        }
-
-        // ═══════════════════ Journey ═══════════════════
-        async function loadJourney() {
-            const data = await api('/journey');
-            if (!data) return;
-            const path = document.getElementById('journeyPath');
-            path.innerHTML = '';
-
-            const ms = [
-                { chelle: 1, name: 'آغاز سفر', color: '#22C55E' },
-                { chelle: 2, name: 'مسیر ادامه', color: '#5AC8FA' },
-                { chelle: 3, name: 'استقامت', color: '#2AABEE' },
-                { chelle: 4, name: 'بلوغ', color: '#5856D6' },
-                { chelle: 5, name: 'تسلط', color: '#F59E0B' },
-                { chelle: 6, name: 'قدرت', color: '#FF2D55' },
-                { chelle: 7, name: 'حکمت', color: '#AF52DE' },
-                { chelle: 8, name: 'استادی', color: '#FFCC00' },
-                { chelle: 9, name: 'عادت‌ساز', color: '#EF4444' },
-            ];
-
-            ms.forEach(m => {
-                let cls = m.chelle < data.current_chelle ? 'completed' : m.chelle === data.current_chelle ? 'current' : 'locked';
-                let desc = cls === 'completed' ? 'تکمیل شده' : cls === 'current' ? `${data.progress_pct}% انجام شده` : 'قفل';
-                let progress = cls === 'current' ? `<div class="journey-progress"><div class="journey-progress-fill" style="width:${data.progress_pct}%"></div></div>` : '';
-
-                path.innerHTML += `
-                    <div class="journey-item ${cls}">
-                        <div class="journey-icon" style="background:${m.color}18">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="${m.color}" stroke-width="2" stroke-linecap="round">
-                                ${cls === 'locked' ? '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>' : cls === 'completed' ? '<polyline points="20 6 9 17 4 12"/>' : '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'}
-                            </svg>
-                        </div>
-                        <div class="journey-info">
-                            <div class="journey-name">چهله ${m.chelle}: ${m.name}</div>
-                            <div class="journey-desc">${desc}</div>
-                            ${progress}
-                        </div>
-                    </div>`;
-            });
-        }
-
-        // ═══════════════════ Achievements ═══════════════════
-        async function loadAchievements() {
-            const data = await api('/achievements');
-            if (!data) return;
-            const grid = document.getElementById('achGrid');
-            grid.innerHTML = '';
-
-            const achs = [
-                { key: 'first_habit', name: 'شروع', color: '#22C55E', d: '<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' },
-                { key: 'streak_3', name: '۳ روزه', color: '#F97316', d: '<path d="M12 2c.5 3.5-1.5 6-1.5 6s2.5.5 3.5 3c.7 1.7.3 3.5-.5 5 2.5-1 4-3.5 4-6.5 0-4.5-3.5-7-5.5-7.5z"/>' },
-                { key: 'streak_7', name: 'هفته‌ای', color: '#F97316', d: '<path d="M12 2c.5 3.5-1.5 6-1.5 6s2.5.5 3.5 3c.7 1.7.3 3.5-.5 5 2.5-1 4-3.5 4-6.5 0-4.5-3.5-7-5.5-7.5z"/>' },
-                { key: 'streak_14', name: '۲ هفته', color: '#F59E0B', d: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>' },
-                { key: 'streak_21', name: '۳ هفته', color: '#F59E0B', d: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>' },
-                { key: 'streak_30', name: 'ماهانه', color: '#5856D6', d: '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>' },
-                { key: 'streak_40', name: 'چهله', color: '#AF52DE', d: '<circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>' },
-                { key: 'streak_66', name: 'عادت‌ساز', color: '#FF2D55', d: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>' },
-                { key: 'perfect_1', name: 'روز کامل', color: '#FFCC00', d: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>' },
-                { key: 'perfect_7', name: 'هفته طلایی', color: '#FFCC00', d: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>' },
-                { key: 'perfect_30', name: 'ماه درخشان', color: '#FF9500', d: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>' },
-                { key: 'course_7', name: 'دانش‌آموز', color: '#2AABEE', d: '<path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>' },
-                { key: 'course_30', name: 'دانشجو', color: '#2AABEE', d: '<path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>' },
-                { key: 'course_chelle', name: 'فارغ‌التحصیل', color: '#5856D6', d: '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 7 3 10 0v-5"/>' },
-                { key: 'first_journal', name: 'تحلیل‌گر', color: '#5AC8FA', d: '<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>' },
-                { key: 'comeback', name: 'برگشت', color: '#22C55E', d: '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>' },
-                { key: 'early_bird', name: 'سحرخیز', color: '#FF9500', d: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>' },
-                { key: 'night_owl', name: 'جغد شب', color: '#5856D6', d: '<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>' },
-                { key: 'emergency_hero', name: 'قهرمان', color: '#FF2D55', d: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>' },
-            ];
-
-            const unlocked = new Set(data.unlocked || []);
-            achs.forEach(a => {
-                grid.innerHTML += `<div class="ach-item ${unlocked.has(a.key) ? '' : 'locked'}"><div class="ach-icon"><svg viewBox="0 0 24 24" fill="none" stroke="${a.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${a.d}</svg></div><div class="ach-name">${a.name}</div></div>`;
-            });
-        }
-
-        // ═══════════════════ More ═══════════════════
-        async function loadMore() {
-            const dhikr = await api('/dhikr');
-            if (dhikr) {
-                document.getElementById('dhikrArabic').textContent = dhikr.text;
-                document.getElementById('dhikrMeaning').textContent = dhikr.meaning;
-                document.getElementById('dhikrCount').textContent = `تکرار: ${dhikr.count}`;
-                document.getElementById('hadithText').textContent = dhikr.hadith;
-            }
-
-            const stats = await api('/stats');
-            if (stats?.streaks) {
-                const el = document.getElementById('streaksDetail');
-                el.innerHTML = '';
-                [{ key: 'namaz', name: 'تمرکز در نماز', color: '#5856D6' }, { key: 'sleep', name: 'خواب منظم', color: '#5AC8FA' }, { key: 'exercise', name: 'ورزش', color: '#FF2D55' }].forEach(h => {
-                    const s = stats.streaks[h.key] || { current: 0, best: 0 };
-                    el.innerHTML += `<div class="streak-item"><div class="streak-icon" style="background:${h.color}18"><svg viewBox="0 0 24 24" fill="${h.color}" stroke="none"><path d="M12 2c.5 3.5-1.5 6-1.5 6s2.5.5 3.5 3c.7 1.7.3 3.5-.5 5 2.5-1 4-3.5 4-6.5 0-4.5-3.5-7-5.5-7.5z"/></svg></div><div class="streak-info"><div class="streak-name">${h.name}</div><div class="streak-best">بهترین: ${s.best} روز</div></div><div class="streak-badge">${s.current}</div></div>`;
-                });
-            }
-
-            const shop = await api('/shop');
-            if (shop) {
-                const el = document.getElementById('shopItems');
-                el.innerHTML = '';
-                shop.items.forEach(item => {
-                    const canBuy = shop.xp >= item.cost;
-                    el.innerHTML += `<div class="shop-item"><div class="shop-info"><div class="shop-name">${item.name}</div><div class="shop-cost">${item.cost} XP</div></div><button class="shop-buy" ${canBuy ? '' : 'disabled'} onclick="buyItem('${item.id}')">${canBuy ? 'خرید' : 'قفل'}</button></div>`;
-                });
-            }
-        }
-
-        async function buyItem(id) {
-            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
-            const data = await api('/buy', 'POST', { item_id: id });
-            if (data?.success) { showToast('خرید موفق!'); loadMore(); loadToday(); }
-            else showToast('XP کافی نیست');
-        }
-
-        // ═══════════════════ Init ═══════════════════
-        window.addEventListener('load', () => {
-            if (!userId) {
-                document.querySelector('.page.active').innerHTML = '<div class="empty-state">لطفاً از طریق تلگرام باز کنید</div>';
-                return;
-            }
-            loadToday();
-        });
-    </script>
 </body>
 </html>
