@@ -414,6 +414,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ── Start Journal ────────────────────────────────────────────────────
     if data == "start_journal":
+        # Check time restriction
+        if not is_journal_allowed():
+            await query.answer("🌙 تحلیل فقط بین ۲۰:۰۰ تا ۰۴:۰۰ مجازه!", show_alert=True)
+            return
+
         msg = f"📝 تحلیل شبانه\n\n"
         msg += f"هرچی از دلت میاد بنویس:\n"
         msg += f"• حالت امروز چطور بود?\n"
@@ -424,6 +429,37 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         context.user_data["awaiting"] = "journal"
         await query.edit_message_text(msg)
+        await query.answer()
+        return
+
+    # ── Delete Account ───────────────────────────────────────────────────
+    if data == "confirm_delete":
+        success = db.delete_user(user_id)
+        if success:
+            await query.edit_message_text(
+                "✅ حساب شما و تمام اطلاعات حذف شد.\n\n"
+                "👋 خداحافظ! اگه برگشتی /start بزن.\n\n"
+                "امیدوارم عادت‌هایی که ساختی باهات بمونن! 💪"
+            )
+        else:
+            await query.edit_message_text("❌ خطا در حذف حساب.")
+        await query.answer()
+        return
+
+    # ── Reset Progress ───────────────────────────────────────────────────
+    if data == "confirm_reset":
+        success = db.reset_user(user_id)
+        if success:
+            await query.edit_message_text(
+                "🔄 پیشرفتت ریست شد!\n\n"
+                "• XP: ۰\n"
+                "• استریک: ۰\n"
+                "• دوره: جلسه ۱\n"
+                "• دستاوردها: پاک\n\n"
+                "حالا از /start یه شروع تازه بزن! 🌱"
+            )
+        else:
+            await query.edit_message_text("❌ خطا در ریست.")
         await query.answer()
         return
 
@@ -925,6 +961,50 @@ async def cmd_resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "▶️ یادآوری‌ها فعال شد! 🔔",
         reply_markup=main_keyboard(),
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Delete / Reset Account (حذف حساب / ریست)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def cmd_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show delete account confirmation."""
+    msg = (
+        "⚠️ حذف حساب\n\n"
+        "با حذف حساب، تمام اطلاعاتت از بین میره:\n"
+        "• تمام عادت‌ها و لاگ‌ها\n"
+        "• XP و دستاوردها\n"
+        "• استریک‌ها\n"
+        "• دوره و تحلیل‌ها\n"
+        "• خریدهای فروشگاه\n\n"
+        "❌ این عمل غیرقابل بازگشته!\n\n"
+        "چیکار می‌خوای بکنی?"
+    )
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🗑 حذف کامل حساب", callback_data="confirm_delete")],
+        [InlineKeyboardButton("🔄 ریست پیشرفت (حساب بمونه)", callback_data="confirm_reset")],
+        [InlineKeyboardButton("↩️ انصراف", callback_data="show_today")],
+    ])
+    await update.message.reply_text(msg, reply_markup=keyboard)
+
+
+async def cmd_reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show reset confirmation."""
+    msg = (
+        "🔄 ریست پیشرفت\n\n"
+        "همه پیشرفتت صفر میشه ولی حسابت می‌مونه:\n"
+        "• XP → ۰\n"
+        "• استریک → ۰\n"
+        "• دستاوردها → پاک\n"
+        "• دوره → جلسه ۱\n\n"
+        "مطمئنی?"
+    )
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ بله، ریست کن", callback_data="confirm_reset")],
+        [InlineKeyboardButton("↩️ انصراف", callback_data="show_today")],
+    ])
+    await update.message.reply_text(msg, reply_markup=keyboard)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

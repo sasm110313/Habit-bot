@@ -27,7 +27,14 @@ async function api(endpoint, method = 'GET', body = null) {
             : `${API_BASE}${endpoint}`;
 
         const res = await fetch(url, opts);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        // Handle non-OK responses — return the body so caller can check errors
+        if (!res.ok) {
+            const errorData = await res.json().catch(() => null);
+            if (errorData) return errorData;
+            throw new Error(`HTTP ${res.status}`);
+        }
+
         return await res.json();
     } catch (e) {
         console.error(`[API] ${method} ${endpoint}:`, e);

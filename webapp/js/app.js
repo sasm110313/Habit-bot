@@ -57,7 +57,8 @@ function showToast(msg, duration = 2500) {
     const el = document.getElementById('toast');
     el.textContent = msg;
     el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), duration);
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => el.classList.remove('show'), duration);
 }
 
 // ═══════════════════ Page Navigation ═══════════════════
@@ -231,9 +232,17 @@ async function saveJournal() {
     }
 
     Haptic.medium();
-    const data = await apiPost('/journal', { content, mood: App.data.mood });
-    if (data) {
-        showToast(`+${data.xp_earned} XP — ثبت شد`);
+    const res = await apiPost('/journal', { content, mood: App.data.mood });
+
+    // Check for time restriction error
+    if (res && res.error === 'time_restricted') {
+        showToast('🌙 تحلیل فقط بین ۲۰:۰۰ تا ۰۴:۰۰ مجازه!', 4000);
+        Haptic.error();
+        return;
+    }
+
+    if (res && !res.error) {
+        showToast(`+${res.xp_earned} XP — ثبت شد`);
         Haptic.success();
         document.getElementById('journalText').value = '';
         document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('selected'));
@@ -245,14 +254,40 @@ async function saveJournal() {
 
 async function buyItem(id) {
     Haptic.heavy();
+
+    // Confirm purchase
+    if (!confirm('مطمئنی میخوای بخری؟')) return;
+
     const data = await apiPost('/buy', { item_id: id });
     if (data?.success) {
-        showToast('خرید موفق!');
+        showToast(`✅ ${data.item_name || 'خرید موفق!'}`);
         Haptic.success();
         loadMore();
         loadToday();
+    } else if (data?.error === 'not_enough_xp') {
+        showToast(data.message || 'XP کافی نیست');
+        Haptic.error();
     } else {
-        showToast('XP کافی نیست');
+        showToast('خطا در خرید');
+        Haptic.error();
+    }
+}
+
+// ═══════════════════ Delete Account ═══════════════════
+
+async function deleteAccount() {
+    if (!confirm('⚠️ آیا مطمئنی؟ تمام اطلاعاتت حذف میشه و غیرقابل بازگشته!')) return;
+    if (!confirm('❌ بار آخر: واقعاً حذف بشه؟')) return;
+
+    Haptic.heavy();
+    const data = await apiPost('/delete_account', { confirm: true });
+    if (data?.success) {
+        showToast('حساب حذف شد. خداحافظ! 👋', 5000);
+        setTimeout(() => {
+            if (tg.close) tg.close();
+        }, 3000);
+    } else {
+        showToast('خطا در حذف');
         Haptic.error();
     }
 }
