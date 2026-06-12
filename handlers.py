@@ -788,19 +788,61 @@ async def cmd_resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _normalize_persian_digits(text: str) -> str:
+    """Convert Persian/Arabic digits to English digits."""
+    persian_digits = "۰۱۲۳۴۵۶۷۸۹"
+    arabic_digits = "٠١٢٣٤٥٦٧٨٩"
+    result = text
+    for i, (p, a) in enumerate(zip(persian_digits, arabic_digits)):
+        result = result.replace(p, str(i)).replace(a, str(i))
+    return result
+
+
+def _is_menu_button(text: str) -> bool:
+    """Check if text is a menu button."""
+    menu_items = [
+        "📋 وضعیت امروز", "📚 دوره", "📊 آمار",
+        "🏆 دستاوردها", "📝 تحلیل", "🔥 استریک", "ℹ️ راهنما",
+    ]
+    return text in menu_items
+
+
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     user_id = update.effective_user.id
     db = _get_db(context)
     gm = _get_gm(context)
 
-    # Check if we're awaiting specific input
+    # ── ALWAYS handle menu buttons first (even during awaiting states) ───
+    if _is_menu_button(text):
+        # Cancel any awaiting state when user clicks menu
+        context.user_data.pop("awaiting", None)
+
+        if text == "📋 وضعیت امروز":
+            await show_today(update, context)
+        elif text == "📚 دوره":
+            await show_course(update, context)
+        elif text == "📊 آمار":
+            await show_stats(update, context)
+        elif text == "🏆 دستاوردها":
+            await show_achievements(update, context)
+        elif text == "📝 تحلیل":
+            await show_journal(update, context)
+        elif text == "🔥 استریک":
+            await show_streaks(update, context)
+        elif text == "ℹ️ راهنما":
+            await cmd_help(update, context)
+        return
+
+    # ── Check if we're awaiting specific input ───────────────────────────
     awaiting = context.user_data.get("awaiting")
 
     if awaiting == "course_session":
         # User is setting their course session number
+        # Normalize Persian digits and strip whitespace
+        normalized = _normalize_persian_digits(text).strip()
         try:
-            session = int(text)
+            session = int(normalized)
             if 1 <= session <= 365:
                 db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
                 db.set_course_session(user_id, session)
@@ -813,13 +855,22 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     reply_markup=main_keyboard(),
                 )
                 return
+            else:
+                await update.message.reply_text(
+                    "❌ عدد باید بین ۱ تا ۳۶۵ باشه.\nمثلاً: 80\n\nیا از دکمه‌های منو استفاده کن (جلسه پیش‌فرض: ۱)",
+                    reply_markup=main_keyboard(),
+                )
+                return
         except ValueError:
-            pass
-        await update.message.reply_text(
-            "❌ لطفاً یه عدد بین ۱ تا ۳۶۵ بفرست.\nمثلاً: 80",
-            reply_markup=main_keyboard(),
-        )
-        return
+            # Not a number - cancel awaiting and set default
+            context.user_data.pop("awaiting", None)
+            db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+            await update.message.reply_text(
+                "⏭ جلسه دوره بعداً تنظیم کن با /setsession\n"
+                "الان از دکمه‌های منو استفاده کن! 👇",
+                reply_markup=main_keyboard(),
+            )
+            return
 
     if awaiting == "journal":
         # User is writing their journal
@@ -846,24 +897,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(msg, reply_markup=main_keyboard())
         return
 
-    # ── Menu buttons ─────────────────────────────────────────────────────
-    if text == "📋 وضعیت امروز":
-        await show_today(update, context)
-    elif text == "📚 دوره":
-        await show_course(update, context)
-    elif text == "📊 آمار":
-        await show_stats(update, context)
-    elif text == "🏆 دستاوردها":
-        await show_achievements(update, context)
-    elif text == "📝 تحلیل":
-        await show_journal(update, context)
-    elif text == "🔥 استریک":
-        await show_streaks(update, context)
-    elif text == "ℹ️ راهنما":
-        await cmd_help(update, context)
-    else:
-        # Unknown text - maybe they're trying to write a journal
-        await update.message.reply_text(
-            "🤔 از دکمه‌های منو استفاده کن!\n/help برای راهنما",
-            reply_markup=main_keyboard(),
-        )
+    # ── Unknown text ─────────────────────────────────────────────────────
+    await update.message.reply_text(
+        "🤔 از دکمه‌های منو استفاده کن!\n/help برای راهنما",
+        reply_markup=main_keyboard(),
+    )
