@@ -47,6 +47,8 @@ from handlers import (
     cmd_setsession,
     cmd_mystats,
     cmd_journal,
+    cmd_delete,
+    cmd_reset,
     show_today,
     show_course,
     show_stats,
@@ -129,6 +131,8 @@ def main():
     app.add_handler(CommandHandler("setsession", cmd_setsession))
     app.add_handler(CommandHandler("pause", cmd_pause))
     app.add_handler(CommandHandler("resume", cmd_resume))
+    app.add_handler(CommandHandler("delete", cmd_delete))
+    app.add_handler(CommandHandler("reset", cmd_reset))
     app.add_handler(CommandHandler("analysis", show_auto_analysis))
     app.add_handler(CommandHandler("challenge", show_daily_challenge))
     app.add_handler(CommandHandler("journey", show_journey_map))
@@ -189,6 +193,12 @@ def main():
     h, m = JOURNAL_REMINDER_TIME
     job_queue.run_daily(job_journal_reminder, time=time(hour=h, minute=m), name="journal")
     print(f"  📝 Journal reminder: {h:02d}:{m:02d}")
+
+    # Journal second reminder (more urgent)
+    from config import JOURNAL_REMINDER_TIME_2
+    h2, m2 = JOURNAL_REMINDER_TIME_2
+    job_queue.run_daily(job_journal_reminder, time=time(hour=h2, minute=m2), name="journal_2")
+    print(f"  📝 Journal reminder 2: {h2:02d}:{m2:02d}")
 
     # Daily summary
     h, m = SUMMARY_TIME

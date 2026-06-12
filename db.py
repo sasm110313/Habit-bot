@@ -780,6 +780,72 @@ class Database:
         finally:
             conn.close()
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # Account Delete / Reset (حذف حساب)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def delete_user(self, user_id: int) -> bool:
+        """Completely delete a user and ALL their data. Returns True if user existed."""
+        conn = self._conn()
+        try:
+            # Check if user exists
+            row = conn.execute("SELECT 1 FROM users WHERE user_id = ?", (user_id,)).fetchone()
+            if not row:
+                return False
+
+            # Delete from all tables
+            conn.execute("DELETE FROM habit_logs WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM course_logs WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM streaks WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM achievements WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM purchases WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM journals WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM xp_logs WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+            conn.commit()
+            logger.info(f"User {user_id} completely deleted.")
+            return True
+        finally:
+            conn.close()
+
+    def reset_user(self, user_id: int) -> bool:
+        """Reset all user progress but keep account. Returns True if user existed."""
+        conn = self._conn()
+        try:
+            row = conn.execute("SELECT 1 FROM users WHERE user_id = ?", (user_id,)).fetchone()
+            if not row:
+                return False
+
+            # Delete progress data
+            conn.execute("DELETE FROM habit_logs WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM course_logs WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM achievements WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM purchases WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM journals WHERE user_id = ?", (user_id,))
+            conn.execute("DELETE FROM xp_logs WHERE user_id = ?", (user_id,))
+
+            # Reset streaks
+            conn.execute(
+                "UPDATE streaks SET current_streak = 0, best_streak = 0, last_date = '' WHERE user_id = ?",
+                (user_id,),
+            )
+
+            # Reset user stats
+            conn.execute(
+                """UPDATE users SET
+                    xp = 0, level = 1,
+                    course_session = 1, course_chelle = 1,
+                    total_perfect_days = 0, total_habits_done = 0, total_journals = 0,
+                    last_active_date = ''
+                WHERE user_id = ?""",
+                (user_id,),
+            )
+            conn.commit()
+            logger.info(f"User {user_id} progress reset.")
+            return True
+        finally:
+            conn.close()
+
     def has_unused_item(self, user_id: int, item_id: str) -> bool:
         """Check if user has an unused purchase of this item."""
         conn = self._conn()

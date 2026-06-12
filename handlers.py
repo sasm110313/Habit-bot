@@ -21,6 +21,7 @@ from config import (
     DAILY_CHALLENGES, XP_CHALLENGE_BONUS,
     JOURNEY_MILESTONES, NIGHTLY_QUESTIONS,
     COACH_TIPS, ANALYSIS_INTERVAL_DAYS,
+    JOURNAL_START_HOUR, JOURNAL_END_HOUR, JOURNAL_NOT_ALLOWED_MSG,
 )
 from datetime import timedelta
 from db import Database
@@ -36,6 +37,15 @@ logger = logging.getLogger(__name__)
 
 def today_str() -> str:
     return datetime.now().date().isoformat()
+
+
+def is_journal_allowed() -> bool:
+    """Check if current time is within journal allowed hours (20:00 - 04:00)."""
+    hour = datetime.now().hour
+    # Allowed: 20,21,22,23,0,1,2,3 (i.e. NOT between JOURNAL_END_HOUR and JOURNAL_START_HOUR)
+    if JOURNAL_END_HOUR <= hour < JOURNAL_START_HOUR:
+        return False
+    return True
 
 
 def main_keyboard() -> ReplyKeyboardMarkup:
@@ -404,6 +414,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ── Start Journal ────────────────────────────────────────────────────
     if data == "start_journal":
+        # Check time restriction
+        if not is_journal_allowed():
+            await query.answer("🌙 تحلیل فقط بین ۲۰:۰۰ تا ۰۴:۰۰ مجازه!", show_alert=True)
+            return
+
         msg = f"📝 تحلیل شبانه\n\n"
         msg += f"هرچی از دلت میاد بنویس:\n"
         msg += f"• حالت امروز چطور بود?\n"
@@ -414,6 +429,37 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         context.user_data["awaiting"] = "journal"
         await query.edit_message_text(msg)
+        await query.answer()
+        return
+
+    # ── Delete Account ───────────────────────────────────────────────────
+    if data == "confirm_delete":
+        success = db.delete_user(user_id)
+        if success:
+            await query.edit_message_text(
+                "✅ حساب شما و تمام اطلاعات حذف شد.\n\n"
+                "👋 خداحافظ! اگه برگشتی /start بزن.\n\n"
+                "امیدوارم عادت‌هایی که ساختی باهات بمونن! 💪"
+            )
+        else:
+            await query.edit_message_text("❌ خطا در حذف حساب.")
+        await query.answer()
+        return
+
+    # ── Reset Progress ───────────────────────────────────────────────────
+    if data == "confirm_reset":
+        success = db.reset_user(user_id)
+        if success:
+            await query.edit_message_text(
+                "🔄 پیشرفتت ریست شد!\n\n"
+                "• XP: ۰\n"
+                "• استریک: ۰\n"
+                "• دوره: جلسه ۱\n"
+                "• دستاوردها: پاک\n\n"
+                "حالا از /start یه شروع تازه بزن! 🌱"
+            )
+        else:
+            await query.edit_message_text("❌ خطا در ریست.")
         await query.answer()
         return
 
@@ -856,6 +902,11 @@ async def show_journal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = _get_db(context)
     db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
 
+    # Check time restriction
+    if not is_journal_allowed():
+        await update.message.reply_text(JOURNAL_NOT_ALLOWED_MSG, reply_markup=main_keyboard())
+        return
+
     date = today_str()
     existing = db.get_journal(user_id, date)
 
@@ -910,6 +961,50 @@ async def cmd_resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "▶️ یادآوری‌ها فعال شد! 🔔",
         reply_markup=main_keyboard(),
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Delete / Reset Account (حذف حساب / ریست)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def cmd_delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show delete account confirmation."""
+    msg = (
+        "⚠️ حذف حساب\n\n"
+        "با حذف حساب، تمام اطلاعاتت از بین میره:\n"
+        "• تمام عادت‌ها و لاگ‌ها\n"
+        "• XP و دستاوردها\n"
+        "• استریک‌ها\n"
+        "• دوره و تحلیل‌ها\n"
+        "• خریدهای فروشگاه\n\n"
+        "❌ این عمل غیرقابل بازگشته!\n\n"
+        "چیکار می‌خوای بکنی?"
+    )
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🗑 حذف کامل حساب", callback_data="confirm_delete")],
+        [InlineKeyboardButton("🔄 ریست پیشرفت (حساب بمونه)", callback_data="confirm_reset")],
+        [InlineKeyboardButton("↩️ انصراف", callback_data="show_today")],
+    ])
+    await update.message.reply_text(msg, reply_markup=keyboard)
+
+
+async def cmd_reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show reset confirmation."""
+    msg = (
+        "🔄 ریست پیشرفت\n\n"
+        "همه پیشرفتت صفر میشه ولی حسابت می‌مونه:\n"
+        "• XP → ۰\n"
+        "• استریک → ۰\n"
+        "• دستاوردها → پاک\n"
+        "• دوره → جلسه ۱\n\n"
+        "مطمئنی?"
+    )
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ بله، ریست کن", callback_data="confirm_reset")],
+        [InlineKeyboardButton("↩️ انصراف", callback_data="show_today")],
+    ])
+    await update.message.reply_text(msg, reply_markup=keyboard)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1021,6 +1116,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
     if awaiting == "journal":
+        # Check time restriction before saving
+        if not is_journal_allowed():
+            context.user_data.pop("awaiting", None)
+            await update.message.reply_text(JOURNAL_NOT_ALLOWED_MSG, reply_markup=main_keyboard())
+            return
+
         # User is writing their journal
         db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
         date = today_str()

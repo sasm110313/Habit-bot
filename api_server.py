@@ -15,6 +15,7 @@ from config import (
     DAILY_DHIKR, DAILY_HADITHS, DUAS_BEFORE_HABIT,
     SHOP_ITEMS, SPIN_WHEEL_PRIZES, XP_WEEKLY_PERFECT, XP_WEEKLY_GOOD, XP_WEEKLY_OK,
     XP_COURSE_WATCHED, XP_JOURNAL_WRITTEN, MOOD_TAGS,
+    JOURNAL_START_HOUR, JOURNAL_END_HOUR, JOURNAL_NOT_ALLOWED_MSG,
 )
 from db import Database
 from gamification import Gamification
@@ -204,6 +205,16 @@ def create_api_app(db: Database, gm: Gamification) -> web.Application:
         if not user_id or not content:
             return web.json_response({"error": "user_id and content required"}, status=400)
 
+        # Check time restriction: journal only allowed between 20:00 and 04:00
+        current_hour = datetime.now().hour
+        if JOURNAL_END_HOUR <= current_hour < JOURNAL_START_HOUR:
+            return web.json_response({
+                "error": "time_restricted",
+                "message": JOURNAL_NOT_ALLOWED_MSG,
+                "allowed_start": JOURNAL_START_HOUR,
+                "allowed_end": JOURNAL_END_HOUR,
+            }, status=403)
+
         db.get_or_create_user(user_id)
         date = today_str()
         is_new = db.save_journal(user_id, date, content, mood=mood, xp=XP_JOURNAL_WRITTEN)
@@ -343,13 +354,27 @@ def create_api_app(db: Database, gm: Gamification) -> web.Application:
         item = next((i for i in SHOP_ITEMS if i["id"] == item_id), None)
 
         if not item:
-            return web.json_response({"success": False, "error": "item not found"})
-        if user["xp"] < item["cost"]:
-            return web.json_response({"success": False, "error": "not enough XP"})
+            return web.json_response({"success": False, "error": "آیتم پیدا نشد"})
 
-        db.add_xp(user_id, -item["cost"], f"خرید: {item['name']}")
+        # Strict XP check - must have enough
+        current_xp = user["xp"]
+        if current_xp < item["cost"]:
+            return web.json_response({
+                "success": False,
+                "error": "not_enough_xp",
+                "message": f"XP کافی نیست! نیاز: {item['cost']} | موجودی: {current_xp}",
+                "required": item["cost"],
+                "available": current_xp,
+            })
+
+        # Deduct XP and get actual new balance from DB
+        new_xp = db.add_xp(user_id, -item["cost"], f"خرید: {item['name']}")
         db.add_purchase(user_id, item["id"])
-        return web.json_response({"success": True, "new_xp": user["xp"] - item["cost"]})
+        return web.json_response({
+            "success": True,
+            "new_xp": new_xp,
+            "item_name": item["name"],
+        })
 
     # ══════════════════════════════════════════════════════════════════════
     # POST /api/spin
@@ -398,6 +423,38 @@ def create_api_app(db: Database, gm: Gamification) -> web.Application:
         })
 
     # ══════════════════════════════════════════════════════════════════════
+    # POST /api/delete_account - Delete user account and all data
+    # ══════════════════════════════════════════════════════════════════════
+
+    async def post_delete_account(request):
+        data = await request.json()
+        user_id = int(data.get('user_id', 0))
+        confirm = data.get('confirm', False)
+
+        if not user_id:
+            return web.json_response({"error": "user_id required"}, status=400)
+
+        if not confirm:
+            return web.json_response({
+                "error": "confirmation_required",
+                "message": "برای حذف حساب، confirm=true ارسال کنید. این عمل غیرقابل بازگشت است!",
+            }, status=400)
+
+        # Delete all user data
+        success = db.delete_user(user_id)
+
+        if success:
+            return web.json_response({
+                "success": True,
+                "message": "حساب و تمام اطلاعات شما حذف شد. خداحافظ! 👋",
+            })
+        else:
+            return web.json_response({
+                "success": False,
+                "message": "کاربری با این شناسه پیدا نشد.",
+            })
+
+    # ══════════════════════════════════════════════════════════════════════
     # Register routes
     # ══════════════════════════════════════════════════════════════════════
 
@@ -412,5 +469,6 @@ def create_api_app(db: Database, gm: Gamification) -> web.Application:
     app.router.add_post('/api/buy', post_buy)
     app.router.add_post('/api/spin', post_spin)
     app.router.add_get('/api/dhikr', get_dhikr)
+    app.router.add_post('/api/delete_account', post_delete_account)
 
     return app
