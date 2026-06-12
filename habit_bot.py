@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """
-ربات تلگرام عادت‌سازی و یادآوری
-Telegram Habit Tracker & Reminder Bot
+🎯 ربات پیشرفته عادت‌سازی و یادآوری دوره آموزشی
+Advanced Habit Tracker & Course Reminder Bot v2.0
 
-Features:
-- مدیریت عادت‌ها (اضافه/حذف)
-- یادآوری چند بار در روز
-- ثبت انجام عادت‌ها با تیک
-- آمار هفتگی/ماهانه
-- یادآوری دوره آموزشی عادت‌سازی
-- استریک روزهای متوالی
-- خلاصه شبانه
+سه عادت ثابت:
+1. تمرکز در نماز (🕌)
+2. خواب منظم (🌙)
+3. ورزش (💪)
+
+هر عادت سه سطح دارد:
+- لقمه کوچک (حالت عادی) 🟢
+- لقمه ویژه (یک درجه کمتر) 🟡
+- لقمه اضطراری (شرایط خاص) 🔴
 """
 
 import os
@@ -31,7 +32,6 @@ from telegram.ext import (
     Application,
     CommandHandler,
     CallbackQueryHandler,
-    ConversationHandler,
     MessageHandler,
     ContextTypes,
     filters,
@@ -43,8 +43,6 @@ from telegram.ext import (
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 DB_PATH = os.environ.get("HABIT_DB_PATH", "habit_bot.db")
-DEFAULT_REMINDER_TIMES = ["07:00", "12:00", "18:00", "21:00"]
-COURSE_REMINDER_MSG = "📚 یادآوری: وقتشه دوره آموزشی عادت‌سازی رو ببینی! 🎯\nامروز چند دقیقه وقت بذار و یک درس جدید یاد بگیر."
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -52,12 +50,90 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-(
-    ADD_HABIT_NAME,
-    ADD_HABIT_DESCRIPTION,
-    ADD_HABIT_FREQUENCY,
-) = range(3)
+# ─────────────────────────────────────────────────────────────────────────────
+# Habit Definitions (Fixed - 3 habits, 3 levels each)
+# ─────────────────────────────────────────────────────────────────────────────
 
+HABITS = {
+    "namaz": {
+        "name": "تمرکز در نماز",
+        "icon": "🕌",
+        "levels": {
+            "small": {"name": "لقمه کوچک", "icon": "🟢", "desc": "نماز کامل با تمرکز بالا (۱۵ دقیقه)"},
+            "special": {"name": "لقمه ویژه", "icon": "🟡", "desc": "نماز با حداقل تمرکز (۵ دقیقه)"},
+            "emergency": {"name": "لقمه اضطراری", "icon": "🔴", "desc": "فقط نیت و حضور قلب (۱ دقیقه)"},
+        },
+    },
+    "sleep": {
+        "name": "خواب منظم",
+        "icon": "🌙",
+        "levels": {
+            "small": {"name": "لقمه کوچک", "icon": "🟢", "desc": "خوابیدن قبل ۲۳ + بیدار شدن ۶ صبح"},
+            "special": {"name": "لقمه ویژه", "icon": "🟡", "desc": "خوابیدن قبل ۲۴ + بیدار شدن ۷ صبح"},
+            "emergency": {"name": "لقمه اضطراری", "icon": "🔴", "desc": "حداقل ۶ ساعت خواب"},
+        },
+    },
+    "exercise": {
+        "name": "ورزش",
+        "icon": "💪",
+        "levels": {
+            "small": {"name": "لقمه کوچک", "icon": "🟢", "desc": "۱۵ دقیقه ورزش کامل"},
+            "special": {"name": "لقمه ویژه", "icon": "🟡", "desc": "۵ دقیقه ورزش سبک"},
+            "emergency": {"name": "لقمه اضطراری", "icon": "🔴", "desc": "۱ دقیقه حرکت (کشش/پیاده‌روی)"},
+        },
+    },
+}
+
+HABIT_ORDER = ["namaz", "sleep", "exercise"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Reminder Schedule
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Course reminders (multiple times per day)
+COURSE_REMINDER_TIMES = [
+    (8, 0),   # صبح
+    (12, 30), # ظهر
+    (17, 0),  # عصر
+    (20, 30), # شب
+    (22, 30), # آخر شب
+]
+
+# Habit reminders
+HABIT_REMINDER_TIMES = [
+    (7, 30),  # صبح زود - یادآوری شروع روز
+    (13, 0),  # بعد ظهر
+    (18, 30), # عصر
+    (21, 0),  # شب - قبل خواب
+]
+
+# Daily summary
+SUMMARY_TIME = (22, 45)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Motivational Messages
+# ─────────────────────────────────────────────────────────────────────────────
+
+MOTIVATIONAL_MSGS = [
+    "💎 هر قدم کوچیک، یه پیروزی بزرگه!",
+    "🌟 امروز بهتر از دیروز باش، همین کافیه!",
+    "🔥 عادت‌ساز واقعی هر روز حاضر میشه، حتی اگه سخته!",
+    "⭐ مهم نیست سرعتت چقدره، مهم اینه که متوقف نشی!",
+    "🏆 تو الان داری کاری میکنی که ۹۹٪ آدما نمیکنن!",
+    "💪 لقمه اضطراری هم یه پیروزیه! مهم ادامه دادنه!",
+    "🎯 عادت = هویت جدید. تو داری خودت رو می‌سازی!",
+    "🌱 درختِ بلند هم روزی یه دونه بود. ادامه بده!",
+    "✨ هر بار که تیک میزنی، مغزت یه اتصال جدید می‌سازه!",
+    "🧠 ۶۶ روز. فقط ۶۶ روز تا ساختن یه عادت دائمی!",
+]
+
+COURSE_MSGS = [
+    "📚 وقتشه یه جلسه از دوره عادت‌سازی ببینی!\n\n🎯 حتی ۵ دقیقه دیدن هم ارزشمنده.",
+    "🎬 یادت نره دوره رو ببینی!\n\n💡 هر چی بیشتر یاد بگیری، عادت‌سازی راحت‌تر میشه.",
+    "📖 الان بهترین وقت برای یادگیریه!\n\n🧠 مغزت آماده جذب اطلاعات جدیده.",
+    "⏰ یادآوری دوره آموزشی!\n\n🔑 علم + عمل = تغییر واقعی",
+    "🚀 یه جلسه دوره ببین و انرژی بگیر!\n\n💎 سرمایه‌گذاری روی خودت بهترین سرمایه‌گذاریه.",
+]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Database
@@ -67,897 +143,1113 @@ logger = logging.getLogger(__name__)
 class Database:
     def __init__(self, db_path: str = DB_PATH):
         self.db_path = db_path
-        self.init_db()
+        self._init_db()
 
-    def get_connection(self) -> sqlite3.Connection:
+    def _conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         return conn
 
-    def init_db(self):
-        conn = self.get_connection()
+    def _init_db(self):
+        conn = self._conn()
         try:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS users (
                     user_id INTEGER PRIMARY KEY,
-                    username TEXT,
-                    first_name TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    is_active INTEGER DEFAULT 1
-                );
-                CREATE TABLE IF NOT EXISTS habits (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    name TEXT NOT NULL,
-                    description TEXT DEFAULT '',
-                    frequency TEXT DEFAULT 'daily',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    is_active INTEGER DEFAULT 1,
-                    sort_order INTEGER DEFAULT 0,
-                    FOREIGN KEY (user_id) REFERENCES users(user_id)
+                    username TEXT DEFAULT '',
+                    first_name TEXT DEFAULT '',
+                    created_at TEXT DEFAULT (datetime('now','localtime')),
+                    is_paused INTEGER DEFAULT 0,
+                    total_perfect_days INTEGER DEFAULT 0
                 );
                 CREATE TABLE IF NOT EXISTS habit_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    habit_id INTEGER NOT NULL,
                     user_id INTEGER NOT NULL,
+                    habit_key TEXT NOT NULL,
                     date TEXT NOT NULL,
-                    completed INTEGER DEFAULT 0,
-                    completed_at TIMESTAMP,
-                    FOREIGN KEY (habit_id) REFERENCES habits(id),
-                    FOREIGN KEY (user_id) REFERENCES users(user_id),
-                    UNIQUE(habit_id, date)
+                    level TEXT DEFAULT NULL,
+                    completed_at TEXT DEFAULT NULL,
+                    UNIQUE(user_id, habit_key, date)
                 );
-                CREATE TABLE IF NOT EXISTS reminders (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    time TEXT NOT NULL,
-                    is_active INTEGER DEFAULT 1,
-                    reminder_type TEXT DEFAULT 'habit',
-                    FOREIGN KEY (user_id) REFERENCES users(user_id)
-                );
-                CREATE TABLE IF NOT EXISTS course_progress (
+                CREATE TABLE IF NOT EXISTS course_logs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
                     date TEXT NOT NULL,
                     watched INTEGER DEFAULT 0,
-                    FOREIGN KEY (user_id) REFERENCES users(user_id),
+                    completed_at TEXT DEFAULT NULL,
                     UNIQUE(user_id, date)
                 );
-                CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON habit_logs(date);
-                CREATE INDEX IF NOT EXISTS idx_habit_logs_user ON habit_logs(user_id);
-                CREATE INDEX IF NOT EXISTS idx_habits_user ON habits(user_id);
+                CREATE TABLE IF NOT EXISTS streaks (
+                    user_id INTEGER NOT NULL,
+                    habit_key TEXT NOT NULL,
+                    current_streak INTEGER DEFAULT 0,
+                    best_streak INTEGER DEFAULT 0,
+                    last_date TEXT DEFAULT '',
+                    PRIMARY KEY(user_id, habit_key)
+                );
+                CREATE TABLE IF NOT EXISTS course_streaks (
+                    user_id INTEGER PRIMARY KEY,
+                    current_streak INTEGER DEFAULT 0,
+                    best_streak INTEGER DEFAULT 0,
+                    last_date TEXT DEFAULT ''
+                );
+                CREATE INDEX IF NOT EXISTS idx_logs_user_date ON habit_logs(user_id, date);
+                CREATE INDEX IF NOT EXISTS idx_course_user_date ON course_logs(user_id, date);
             """)
             conn.commit()
         finally:
             conn.close()
 
+    # ── User ─────────────────────────────────────────────────────────────────
+
     def get_or_create_user(self, user_id: int, username: str = "", first_name: str = "") -> dict:
-        conn = self.get_connection()
+        conn = self._conn()
         try:
-            user = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
-            if user is None:
+            row = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
+            if not row:
                 conn.execute(
                     "INSERT INTO users (user_id, username, first_name) VALUES (?, ?, ?)",
                     (user_id, username, first_name),
                 )
-                for t in DEFAULT_REMINDER_TIMES:
+                # Initialize streaks
+                for key in HABIT_ORDER:
                     conn.execute(
-                        "INSERT INTO reminders (user_id, time, reminder_type) VALUES (?, ?, 'habit')",
-                        (user_id, t),
+                        "INSERT OR IGNORE INTO streaks (user_id, habit_key) VALUES (?, ?)",
+                        (user_id, key),
                     )
                 conn.execute(
-                    "INSERT INTO reminders (user_id, time, reminder_type) VALUES (?, ?, 'course')",
-                    (user_id, "09:00"),
+                    "INSERT OR IGNORE INTO course_streaks (user_id) VALUES (?)", (user_id,)
                 )
                 conn.commit()
-                user = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
-            return dict(user)
+                row = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
+            return dict(row)
         finally:
             conn.close()
 
     def get_all_active_users(self) -> list:
-        conn = self.get_connection()
+        conn = self._conn()
         try:
-            rows = conn.execute("SELECT * FROM users WHERE is_active = 1").fetchall()
-            return [dict(r) for r in rows]
+            rows = conn.execute("SELECT user_id FROM users WHERE is_paused = 0").fetchall()
+            return [r["user_id"] for r in rows]
         finally:
             conn.close()
 
-    def add_habit(self, user_id: int, name: str, description: str = "", frequency: str = "daily") -> int:
-        conn = self.get_connection()
+    def set_paused(self, user_id: int, paused: bool):
+        conn = self._conn()
         try:
-            cursor = conn.execute(
-                "INSERT INTO habits (user_id, name, description, frequency) VALUES (?, ?, ?, ?)",
-                (user_id, name, description, frequency),
-            )
-            conn.commit()
-            return cursor.lastrowid
-        finally:
-            conn.close()
-
-    def get_habits(self, user_id: int, active_only: bool = True) -> list:
-        conn = self.get_connection()
-        try:
-            query = "SELECT * FROM habits WHERE user_id = ?"
-            if active_only:
-                query += " AND is_active = 1"
-            query += " ORDER BY sort_order, id"
-            rows = conn.execute(query, (user_id,)).fetchall()
-            return [dict(r) for r in rows]
-        finally:
-            conn.close()
-
-    def get_habit(self, habit_id: int) -> Optional[dict]:
-        conn = self.get_connection()
-        try:
-            row = conn.execute("SELECT * FROM habits WHERE id = ?", (habit_id,)).fetchone()
-            return dict(row) if row else None
-        finally:
-            conn.close()
-
-    def delete_habit(self, habit_id: int):
-        conn = self.get_connection()
-        try:
-            conn.execute("UPDATE habits SET is_active = 0 WHERE id = ?", (habit_id,))
+            conn.execute("UPDATE users SET is_paused = ? WHERE user_id = ?", (1 if paused else 0, user_id))
             conn.commit()
         finally:
             conn.close()
 
-    def toggle_habit(self, habit_id: int, user_id: int, date: str) -> bool:
-        conn = self.get_connection()
+    # ── Habit Logs ───────────────────────────────────────────────────────────
+
+    def log_habit(self, user_id: int, habit_key: str, date: str, level: str) -> bool:
+        """Log a habit completion at a specific level. Returns True if new."""
+        conn = self._conn()
         try:
             existing = conn.execute(
-                "SELECT * FROM habit_logs WHERE habit_id = ? AND date = ?",
-                (habit_id, date),
+                "SELECT * FROM habit_logs WHERE user_id = ? AND habit_key = ? AND date = ?",
+                (user_id, habit_key, date),
             ).fetchone()
-            if existing and existing["completed"]:
-                conn.execute(
-                    "UPDATE habit_logs SET completed = 0, completed_at = NULL WHERE habit_id = ? AND date = ?",
-                    (habit_id, date),
-                )
-                conn.commit()
-                return False
+
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            if existing:
+                if existing["level"] == level:
+                    # Same level - remove it (toggle off)
+                    conn.execute(
+                        "DELETE FROM habit_logs WHERE user_id = ? AND habit_key = ? AND date = ?",
+                        (user_id, habit_key, date),
+                    )
+                    conn.commit()
+                    self._update_streak(user_id, habit_key)
+                    return False
+                else:
+                    # Different level - update
+                    conn.execute(
+                        "UPDATE habit_logs SET level = ?, completed_at = ? WHERE user_id = ? AND habit_key = ? AND date = ?",
+                        (level, now, user_id, habit_key, date),
+                    )
+                    conn.commit()
+                    self._update_streak(user_id, habit_key)
+                    return True
             else:
                 conn.execute(
-                    """INSERT INTO habit_logs (habit_id, user_id, date, completed, completed_at)
-                       VALUES (?, ?, ?, 1, ?)
-                       ON CONFLICT(habit_id, date) DO UPDATE SET completed = 1, completed_at = ?""",
-                    (habit_id, user_id, date, datetime.now().isoformat(), datetime.now().isoformat()),
+                    "INSERT INTO habit_logs (user_id, habit_key, date, level, completed_at) VALUES (?, ?, ?, ?, ?)",
+                    (user_id, habit_key, date, level, now),
                 )
                 conn.commit()
+                self._update_streak(user_id, habit_key)
                 return True
         finally:
             conn.close()
 
-    def get_today_status(self, user_id: int, date: str) -> list:
-        conn = self.get_connection()
+    def get_today_status(self, user_id: int, date: str) -> dict:
+        """Get status of all 3 habits for today."""
+        conn = self._conn()
         try:
-            rows = conn.execute(
-                """SELECT h.id, h.name, h.description, h.frequency,
-                          COALESCE(hl.completed, 0) as completed
-                   FROM habits h
-                   LEFT JOIN habit_logs hl ON h.id = hl.habit_id AND hl.date = ?
-                   WHERE h.user_id = ? AND h.is_active = 1
-                   ORDER BY h.sort_order, h.id""",
-                (date, user_id),
-            ).fetchall()
-            return [dict(r) for r in rows]
+            result = {}
+            for key in HABIT_ORDER:
+                row = conn.execute(
+                    "SELECT * FROM habit_logs WHERE user_id = ? AND habit_key = ? AND date = ?",
+                    (user_id, key, date),
+                ).fetchone()
+                result[key] = dict(row) if row else None
+            return result
         finally:
             conn.close()
 
-    def get_streak(self, habit_id: int) -> int:
-        conn = self.get_connection()
+    def get_habit_log(self, user_id: int, habit_key: str, date: str) -> Optional[dict]:
+        conn = self._conn()
         try:
+            row = conn.execute(
+                "SELECT * FROM habit_logs WHERE user_id = ? AND habit_key = ? AND date = ?",
+                (user_id, habit_key, date),
+            ).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+    # ── Streaks ──────────────────────────────────────────────────────────────
+
+    def _update_streak(self, user_id: int, habit_key: str):
+        conn = self._conn()
+        try:
+            # Calculate streak from logs
             rows = conn.execute(
-                """SELECT date FROM habit_logs
-                   WHERE habit_id = ? AND completed = 1
-                   ORDER BY date DESC""",
-                (habit_id,),
+                "SELECT DISTINCT date FROM habit_logs WHERE user_id = ? AND habit_key = ? ORDER BY date DESC",
+                (user_id, habit_key),
             ).fetchall()
+
             if not rows:
-                return 0
+                conn.execute(
+                    "UPDATE streaks SET current_streak = 0, last_date = '' WHERE user_id = ? AND habit_key = ?",
+                    (user_id, habit_key),
+                )
+                conn.commit()
+                return
+
             streak = 0
             today = datetime.now().date()
-            expected_date = today
+            expected = today
+
             for row in rows:
                 log_date = datetime.strptime(row["date"], "%Y-%m-%d").date()
-                if log_date == expected_date:
+                if log_date == expected:
                     streak += 1
-                    expected_date -= timedelta(days=1)
-                elif log_date == expected_date - timedelta(days=1):
-                    expected_date = log_date
+                    expected -= timedelta(days=1)
+                elif log_date == today - timedelta(days=1) and streak == 0:
+                    # Yesterday counts if today hasn't been logged yet
+                    expected = log_date
                     streak += 1
-                    expected_date -= timedelta(days=1)
+                    expected -= timedelta(days=1)
                 else:
                     break
-            return streak
+
+            # Update streak record
+            current = conn.execute(
+                "SELECT best_streak FROM streaks WHERE user_id = ? AND habit_key = ?",
+                (user_id, habit_key),
+            ).fetchone()
+            best = max(current["best_streak"] if current else 0, streak)
+
+            conn.execute(
+                """INSERT INTO streaks (user_id, habit_key, current_streak, best_streak, last_date)
+                   VALUES (?, ?, ?, ?, ?)
+                   ON CONFLICT(user_id, habit_key) DO UPDATE SET
+                   current_streak = ?, best_streak = ?, last_date = ?""",
+                (user_id, habit_key, streak, best, today.isoformat(),
+                 streak, best, today.isoformat()),
+            )
+            conn.commit()
         finally:
             conn.close()
 
+    def get_streak(self, user_id: int, habit_key: str) -> dict:
+        conn = self._conn()
+        try:
+            row = conn.execute(
+                "SELECT * FROM streaks WHERE user_id = ? AND habit_key = ?",
+                (user_id, habit_key),
+            ).fetchone()
+            return dict(row) if row else {"current_streak": 0, "best_streak": 0}
+        finally:
+            conn.close()
+
+    def get_all_streaks(self, user_id: int) -> dict:
+        result = {}
+        for key in HABIT_ORDER:
+            result[key] = self.get_streak(user_id, key)
+        return result
+
+    # ── Course ───────────────────────────────────────────────────────────────
+
+    def log_course(self, user_id: int, date: str) -> bool:
+        """Toggle course watched. Returns new state."""
+        conn = self._conn()
+        try:
+            existing = conn.execute(
+                "SELECT * FROM course_logs WHERE user_id = ? AND date = ?",
+                (user_id, date),
+            ).fetchone()
+
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            if existing and existing["watched"]:
+                conn.execute(
+                    "UPDATE course_logs SET watched = 0, completed_at = NULL WHERE user_id = ? AND date = ?",
+                    (user_id, date),
+                )
+                conn.commit()
+                self._update_course_streak(user_id)
+                return False
+            else:
+                conn.execute(
+                    """INSERT INTO course_logs (user_id, date, watched, completed_at) VALUES (?, ?, 1, ?)
+                       ON CONFLICT(user_id, date) DO UPDATE SET watched = 1, completed_at = ?""",
+                    (user_id, date, now, now),
+                )
+                conn.commit()
+                self._update_course_streak(user_id)
+                return True
+        finally:
+            conn.close()
+
+    def get_course_today(self, user_id: int, date: str) -> bool:
+        conn = self._conn()
+        try:
+            row = conn.execute(
+                "SELECT watched FROM course_logs WHERE user_id = ? AND date = ?",
+                (user_id, date),
+            ).fetchone()
+            return bool(row and row["watched"])
+        finally:
+            conn.close()
+
+    def _update_course_streak(self, user_id: int):
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                "SELECT date FROM course_logs WHERE user_id = ? AND watched = 1 ORDER BY date DESC",
+                (user_id,),
+            ).fetchall()
+
+            if not rows:
+                conn.execute(
+                    "UPDATE course_streaks SET current_streak = 0 WHERE user_id = ?", (user_id,)
+                )
+                conn.commit()
+                return
+
+            streak = 0
+            today = datetime.now().date()
+            expected = today
+
+            for row in rows:
+                log_date = datetime.strptime(row["date"], "%Y-%m-%d").date()
+                if log_date == expected:
+                    streak += 1
+                    expected -= timedelta(days=1)
+                elif log_date == today - timedelta(days=1) and streak == 0:
+                    expected = log_date
+                    streak += 1
+                    expected -= timedelta(days=1)
+                else:
+                    break
+
+            current = conn.execute(
+                "SELECT best_streak FROM course_streaks WHERE user_id = ?", (user_id,)
+            ).fetchone()
+            best = max(current["best_streak"] if current else 0, streak)
+
+            conn.execute(
+                """INSERT INTO course_streaks (user_id, current_streak, best_streak, last_date)
+                   VALUES (?, ?, ?, ?)
+                   ON CONFLICT(user_id) DO UPDATE SET
+                   current_streak = ?, best_streak = ?, last_date = ?""",
+                (user_id, streak, best, today.isoformat(), streak, best, today.isoformat()),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def get_course_streak(self, user_id: int) -> dict:
+        conn = self._conn()
+        try:
+            row = conn.execute(
+                "SELECT * FROM course_streaks WHERE user_id = ?", (user_id,)
+            ).fetchone()
+            return dict(row) if row else {"current_streak": 0, "best_streak": 0}
+        finally:
+            conn.close()
+
+    # ── Statistics ───────────────────────────────────────────────────────────
+
     def get_weekly_stats(self, user_id: int) -> dict:
-        conn = self.get_connection()
+        conn = self._conn()
         try:
             today = datetime.now().date()
             week_ago = today - timedelta(days=6)
-            habits = self.get_habits(user_id)
-            total_possible = len(habits) * 7
+            total_possible = 3 * 7  # 3 habits * 7 days
+
             completed = conn.execute(
-                """SELECT COUNT(*) as count FROM habit_logs
-                   WHERE user_id = ? AND completed = 1 AND date >= ? AND date <= ?""",
+                """SELECT COUNT(*) as c FROM habit_logs
+                   WHERE user_id = ? AND date >= ? AND date <= ?""",
                 (user_id, week_ago.isoformat(), today.isoformat()),
-            ).fetchone()["count"]
-            daily_stats = []
+            ).fetchone()["c"]
+
+            # Per-habit stats
+            per_habit = {}
+            for key in HABIT_ORDER:
+                count = conn.execute(
+                    """SELECT COUNT(*) as c FROM habit_logs
+                       WHERE user_id = ? AND habit_key = ? AND date >= ? AND date <= ?""",
+                    (user_id, key, week_ago.isoformat(), today.isoformat()),
+                ).fetchone()["c"]
+                per_habit[key] = count
+
+            # Perfect days (all 3 done)
+            perfect_days = 0
             for i in range(7):
-                d = week_ago + timedelta(days=i)
-                day_completed = conn.execute(
-                    """SELECT COUNT(*) as count FROM habit_logs
-                       WHERE user_id = ? AND completed = 1 AND date = ?""",
-                    (user_id, d.isoformat()),
-                ).fetchone()["count"]
-                daily_stats.append({"date": d.isoformat(), "completed": day_completed, "total": len(habits)})
+                d = (week_ago + timedelta(days=i)).isoformat()
+                day_count = conn.execute(
+                    "SELECT COUNT(*) as c FROM habit_logs WHERE user_id = ? AND date = ?",
+                    (user_id, d),
+                ).fetchone()["c"]
+                if day_count >= 3:
+                    perfect_days += 1
+
             return {
                 "total_possible": total_possible,
                 "total_completed": completed,
-                "percentage": round(completed / total_possible * 100, 1) if total_possible > 0 else 0,
-                "daily": daily_stats,
+                "percentage": round(completed / total_possible * 100) if total_possible > 0 else 0,
+                "per_habit": per_habit,
+                "perfect_days": perfect_days,
             }
         finally:
             conn.close()
 
     def get_monthly_stats(self, user_id: int) -> dict:
-        conn = self.get_connection()
+        conn = self._conn()
         try:
             today = datetime.now().date()
             month_ago = today - timedelta(days=29)
-            habits = self.get_habits(user_id)
-            total_possible = len(habits) * 30
+            total_possible = 3 * 30
+
             completed = conn.execute(
-                """SELECT COUNT(*) as count FROM habit_logs
-                   WHERE user_id = ? AND completed = 1 AND date >= ? AND date <= ?""",
+                """SELECT COUNT(*) as c FROM habit_logs
+                   WHERE user_id = ? AND date >= ? AND date <= ?""",
                 (user_id, month_ago.isoformat(), today.isoformat()),
-            ).fetchone()["count"]
+            ).fetchone()["c"]
+
+            # Level breakdown
+            levels = {"small": 0, "special": 0, "emergency": 0}
+            for level in levels:
+                levels[level] = conn.execute(
+                    """SELECT COUNT(*) as c FROM habit_logs
+                       WHERE user_id = ? AND level = ? AND date >= ? AND date <= ?""",
+                    (user_id, level, month_ago.isoformat(), today.isoformat()),
+                ).fetchone()["c"]
+
+            # Course days
+            course_days = conn.execute(
+                """SELECT COUNT(*) as c FROM course_logs
+                   WHERE user_id = ? AND watched = 1 AND date >= ? AND date <= ?""",
+                (user_id, month_ago.isoformat(), today.isoformat()),
+            ).fetchone()["c"]
+
             return {
                 "total_possible": total_possible,
                 "total_completed": completed,
-                "percentage": round(completed / total_possible * 100, 1) if total_possible > 0 else 0,
+                "percentage": round(completed / total_possible * 100) if total_possible > 0 else 0,
+                "levels": levels,
+                "course_days": course_days,
             }
-        finally:
-            conn.close()
-
-    def get_reminders(self, user_id: int) -> list:
-        conn = self.get_connection()
-        try:
-            rows = conn.execute(
-                "SELECT * FROM reminders WHERE user_id = ? AND is_active = 1 ORDER BY time",
-                (user_id,),
-            ).fetchall()
-            return [dict(r) for r in rows]
-        finally:
-            conn.close()
-
-    def get_all_reminders_at_time(self, time_str: str) -> list:
-        conn = self.get_connection()
-        try:
-            rows = conn.execute(
-                """SELECT r.*, u.user_id FROM reminders r
-                   JOIN users u ON r.user_id = u.user_id
-                   WHERE r.time = ? AND r.is_active = 1 AND u.is_active = 1""",
-                (time_str,),
-            ).fetchall()
-            return [dict(r) for r in rows]
-        finally:
-            conn.close()
-
-    def add_reminder(self, user_id: int, time_str: str, reminder_type: str = "habit") -> int:
-        conn = self.get_connection()
-        try:
-            cursor = conn.execute(
-                "INSERT INTO reminders (user_id, time, reminder_type) VALUES (?, ?, ?)",
-                (user_id, time_str, reminder_type),
-            )
-            conn.commit()
-            return cursor.lastrowid
-        finally:
-            conn.close()
-
-    def remove_reminder(self, reminder_id: int):
-        conn = self.get_connection()
-        try:
-            conn.execute("UPDATE reminders SET is_active = 0 WHERE id = ?", (reminder_id,))
-            conn.commit()
-        finally:
-            conn.close()
-
-    def toggle_course_watched(self, user_id: int, date: str) -> bool:
-        conn = self.get_connection()
-        try:
-            existing = conn.execute(
-                "SELECT * FROM course_progress WHERE user_id = ? AND date = ?",
-                (user_id, date),
-            ).fetchone()
-            if existing and existing["watched"]:
-                conn.execute(
-                    "UPDATE course_progress SET watched = 0 WHERE user_id = ? AND date = ?",
-                    (user_id, date),
-                )
-                conn.commit()
-                return False
-            else:
-                conn.execute(
-                    """INSERT INTO course_progress (user_id, date, watched)
-                       VALUES (?, ?, 1)
-                       ON CONFLICT(user_id, date) DO UPDATE SET watched = 1""",
-                    (user_id, date),
-                )
-                conn.commit()
-                return True
-        finally:
-            conn.close()
-
-    def get_course_streak(self, user_id: int) -> int:
-        conn = self.get_connection()
-        try:
-            rows = conn.execute(
-                """SELECT date FROM course_progress
-                   WHERE user_id = ? AND watched = 1
-                   ORDER BY date DESC""",
-                (user_id,),
-            ).fetchall()
-            if not rows:
-                return 0
-            streak = 0
-            today = datetime.now().date()
-            expected_date = today
-            for row in rows:
-                log_date = datetime.strptime(row["date"], "%Y-%m-%d").date()
-                if log_date == expected_date:
-                    streak += 1
-                    expected_date -= timedelta(days=1)
-                elif log_date == expected_date - timedelta(days=1):
-                    expected_date = log_date
-                    streak += 1
-                    expected_date -= timedelta(days=1)
-                else:
-                    break
-            return streak
         finally:
             conn.close()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Bot Handlers
+# Bot Instance
 # ─────────────────────────────────────────────────────────────────────────────
 
 db = Database()
 
 
-def get_today() -> str:
+def today_str() -> str:
     return datetime.now().date().isoformat()
 
 
-def get_main_keyboard() -> ReplyKeyboardMarkup:
+def get_motivational() -> str:
+    import random
+    return random.choice(MOTIVATIONAL_MSGS)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Keyboards
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def main_menu_keyboard() -> ReplyKeyboardMarkup:
     keyboard = [
-        ["📋 عادت‌های امروز", "➕ افزودن عادت"],
-        ["📊 آمار هفتگی", "📈 آمار ماهانه"],
-        ["📚 دوره آموزشی", "⏰ تنظیم یادآوری"],
-        ["🗑 حذف عادت", "ℹ️ راهنما"],
+        ["📋 وضعیت امروز"],
+        ["📚 دوره آموزشی", "📊 آمار"],
+        ["🔥 استریک‌ها", "ℹ️ راهنما"],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def habit_inline_keyboard(user_id: int, date: str) -> InlineKeyboardMarkup:
+    """Generate the main habits status keyboard."""
+    status = db.get_today_status(user_id, date)
+    streaks = db.get_all_streaks(user_id)
+    keyboard = []
+
+    for key in HABIT_ORDER:
+        habit = HABITS[key]
+        log = status[key]
+        streak_info = streaks[key]
+        streak_num = streak_info["current_streak"]
+
+        if log:
+            level = log["level"]
+            level_info = habit["levels"][level]
+            # Completed - show with check and level
+            text = f"✅ {habit['icon']} {habit['name']} ({level_info['icon']} {level_info['name']})"
+            if streak_num > 0:
+                text += f" 🔥{streak_num}"
+            keyboard.append([InlineKeyboardButton(text, callback_data=f"detail_{key}")])
+        else:
+            # Not done - show action button
+            text = f"⬜ {habit['icon']} {habit['name']}"
+            if streak_num > 0:
+                text += f" 🔥{streak_num}"
+            keyboard.append([InlineKeyboardButton(text, callback_data=f"pick_{key}")])
+
+    # Bottom row
+    keyboard.append([
+        InlineKeyboardButton("🔄 بروزرسانی", callback_data="refresh"),
+    ])
+
+    return InlineKeyboardMarkup(keyboard)
+
+
+def level_picker_keyboard(habit_key: str) -> InlineKeyboardMarkup:
+    """Show the 3 levels for a habit."""
+    habit = HABITS[habit_key]
+    keyboard = []
+
+    for level_key, level in habit["levels"].items():
+        text = f"{level['icon']} {level['name']} — {level['desc']}"
+        keyboard.append([InlineKeyboardButton(text, callback_data=f"log_{habit_key}_{level_key}")])
+
+    keyboard.append([InlineKeyboardButton("↩️ برگشت", callback_data="back_to_habits")])
+    return InlineKeyboardMarkup(keyboard)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Handlers
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     db.get_or_create_user(user.id, user.username or "", user.first_name or "")
-    welcome_msg = f"""سلام {user.first_name}! 👋
 
-به ربات عادت‌سازی خوش آمدی! 🎯
+    msg = f"""سلام {user.first_name}! 👋
 
-من کمکت می‌کنم تا:
-✅ عادت‌های روزانه‌ات رو مدیریت کنی
-⏰ یادآوری‌های منظم دریافت کنی
-📚 دوره آموزشی عادت‌سازی رو فراموش نکنی
-📊 پیشرفتت رو ببینی
+به ربات عادت‌سازی خوش اومدی! 🎯
 
-از دکمه‌های زیر استفاده کن! 👇"""
-    await update.message.reply_text(welcome_msg, reply_markup=get_main_keyboard())
+━━━━━━━━━━━━━━━━━━━━━━━━
+🕌  تمرکز در نماز
+🌙  خواب منظم
+💪  ورزش
+━━━━━━━━━━━━━━━━━━━━━━━━
 
+هر عادت ۳ سطح داره:
+🟢 لقمه کوچک — حالت عادی
+🟡 لقمه ویژه — یه درجه کمتر
+🔴 لقمه اضطراری — شرایط خاص
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    help_text = """📖 راهنمای ربات عادت‌سازی
+📚 دوره آموزشی عادت‌سازی هم هر روز بهت یادآوری میشه!
 
-🔸 مدیریت عادت‌ها:
-/add - افزودن عادت جدید
-/habits - مشاهده و تیک زدن عادت‌ها
-/delete - حذف عادت
+{get_motivational()}
 
-🔸 آمار:
-/stats - آمار هفتگی
-/monthly - آمار ماهانه
+از دکمه‌های زیر شروع کن! 👇"""
 
-🔸 دوره آموزشی:
-/course - ثبت تماشای دوره
-
-🔸 یادآوری:
-/reminders - مشاهده یادآوری‌ها
-/addreminder HH:MM - افزودن
-/removereminder - حذف
-
-🔸 تنظیمات:
-/pause - توقف یادآوری‌ها
-/resume - ادامه یادآوری‌ها"""
-    await update.message.reply_text(help_text, reply_markup=get_main_keyboard())
+    await update.message.reply_text(msg, reply_markup=main_menu_keyboard())
 
 
-async def show_habits(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = """📖 راهنمای ربات
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📋 وضعیت امروز — دیدن و تیک زدن عادت‌ها
+📚 دوره آموزشی — ثبت تماشای دوره
+📊 آمار — آمار هفتگی و ماهانه
+🔥 استریک‌ها — روزهای متوالی
+
+⏰ یادآوری‌ها:
+• دوره: ۸:۰۰ | ۱۲:۳۰ | ۱۷:۰۰ | ۲۰:۳۰ | ۲۲:۳۰
+• عادت‌ها: ۷:۳۰ | ۱۳:۰۰ | ۱۸:۳۰ | ۲۱:۰۰
+• خلاصه شبانه: ۲۲:۴۵
+
+🎯 نکته مهم:
+حتی در بدترین شرایط، لقمه اضطراری رو بزن!
+مهم ادامه دادنه، نه کامل بودن! 💪
+
+/pause — توقف یادآوری
+/resume — ادامه یادآوری
+━━━━━━━━━━━━━━━━━━━━━━━━"""
+    await update.message.reply_text(msg, reply_markup=main_menu_keyboard())
+
+
+async def show_today_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show today's habits status."""
     user_id = update.effective_user.id
     db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
-    today = get_today()
-    habits = db.get_today_status(user_id, today)
+    date = today_str()
+    status = db.get_today_status(user_id, date)
 
-    if not habits:
-        await update.message.reply_text(
-            "هنوز عادتی اضافه نکردی! 🤔\nبرای شروع از /add استفاده کن.",
-            reply_markup=get_main_keyboard(),
-        )
-        return
+    # Count completed
+    done = sum(1 for v in status.values() if v is not None)
+    total = 3
 
-    completed_count = sum(1 for h in habits if h["completed"])
-    total = len(habits)
-    progress_pct = completed_count / total * 100
-    filled = int(progress_pct / 10)
-    progress_bar = "🟩" * filled + "⬜" * (10 - filled)
+    # Progress visualization
+    if done == 0:
+        progress = "⬜⬜⬜"
+        header = "🌅 هنوز شروع نکردی!"
+    elif done == 1:
+        progress = "🟩⬜⬜"
+        header = "👍 یکی انجام شد! ادامه بده!"
+    elif done == 2:
+        progress = "🟩🟩⬜"
+        header = "🔥 عالی! فقط یکی مونده!"
+    else:
+        progress = "🟩🟩🟩"
+        header = "🏆 تبریک! روز کامل! 🎉"
 
-    msg = f"📋 عادت‌های امروز ({today}):\n\n"
-    msg += f"پیشرفت: {progress_bar} {progress_pct:.0f}%\n"
-    msg += f"انجام شده: {completed_count}/{total}\n\n"
+    msg = f"""📋 وضعیت امروز — {date}
 
-    keyboard = []
-    for habit in habits:
-        status = "✅" if habit["completed"] else "⬜"
-        streak = db.get_streak(habit["id"])
-        streak_text = f" 🔥{streak}" if streak > 0 else ""
-        btn_text = f"{status} {habit['name']}{streak_text}"
-        keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"toggle_{habit['id']}")])
-    keyboard.append([InlineKeyboardButton("🔄 بروزرسانی", callback_data="refresh_habits")])
+{progress}  {done}/3  {header}
 
-    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+━━━━━━━━━━━━━━━━━━━━━━━━
+روی هر عادت کلیک کن تا سطحش رو انتخاب کنی:
+━━━━━━━━━━━━━━━━━━━━━━━━"""
+
+    keyboard = habit_inline_keyboard(user_id, date)
+    await update.message.reply_text(msg, reply_markup=keyboard)
 
 
-async def toggle_habit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle all inline keyboard callbacks."""
     query = update.callback_query
-    await query.answer()
     user_id = query.from_user.id
-    today = get_today()
+    date = today_str()
+    data = query.data
 
-    if query.data.startswith("toggle_"):
-        habit_id = int(query.data.split("_")[1])
-        new_state = db.toggle_habit(habit_id, user_id, today)
-        habit = db.get_habit(habit_id)
-        if new_state:
-            await query.answer(f"✅ «{habit['name']}» انجام شد! 🎉")
+    if data == "refresh" or data == "back_to_habits":
+        # Refresh habits view
+        status = db.get_today_status(user_id, date)
+        done = sum(1 for v in status.values() if v is not None)
+
+        if done == 0:
+            progress = "⬜⬜⬜"
+            header = "🌅 هنوز شروع نکردی!"
+        elif done == 1:
+            progress = "🟩⬜⬜"
+            header = "👍 یکی انجام شد!"
+        elif done == 2:
+            progress = "🟩🟩⬜"
+            header = "🔥 فقط یکی مونده!"
         else:
-            await query.answer(f"⬜ «{habit['name']}» برداشته شد.")
-    elif query.data == "course_toggle":
-        new_state = db.toggle_course_watched(user_id, today)
-        if new_state:
-            await query.answer("✅ دوره امروز تماشا شد! 🎉")
+            progress = "🟩🟩🟩"
+            header = "🏆 روز کامل! 🎉"
+
+        msg = f"""📋 وضعیت امروز — {date}
+
+{progress}  {done}/3  {header}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+روی هر عادت کلیک کن تا سطحش رو انتخاب کنی:
+━━━━━━━━━━━━━━━━━━━━━━━━"""
+
+        keyboard = habit_inline_keyboard(user_id, date)
+        await query.edit_message_text(msg, reply_markup=keyboard)
+        await query.answer()
+
+    elif data.startswith("pick_"):
+        # Show level picker for a habit
+        habit_key = data.replace("pick_", "")
+        habit = HABITS[habit_key]
+
+        msg = f"""{habit['icon']} {habit['name']}
+
+کدوم سطح رو امروز انجام دادی?
+
+━━━━━━━━━━━━━━━━━━━━━━━━"""
+
+        keyboard = level_picker_keyboard(habit_key)
+        await query.edit_message_text(msg, reply_markup=keyboard)
+        await query.answer()
+
+    elif data.startswith("detail_"):
+        # Show detail of completed habit (allow changing level)
+        habit_key = data.replace("detail_", "")
+        habit = HABITS[habit_key]
+        log = db.get_habit_log(user_id, habit_key, date)
+
+        if log:
+            level_info = habit["levels"][log["level"]]
+            msg = f"""✅ {habit['icon']} {habit['name']}
+
+سطح انجام: {level_info['icon']} {level_info['name']}
+📝 {level_info['desc']}
+⏰ ثبت شده: {log['completed_at'][:16] if log['completed_at'] else ''}
+
+می‌خوای سطح رو عوض کنی?
+━━━━━━━━━━━━━━━━━━━━━━━━"""
         else:
-            await query.answer("⬜ لغو شد.")
-        await _show_course_inline(query, user_id)
-        return
+            msg = f"""{habit['icon']} {habit['name']}
 
-    # Update habits message
-    habits = db.get_today_status(user_id, today)
-    completed_count = sum(1 for h in habits if h["completed"])
-    total = len(habits)
-    progress_pct = completed_count / total * 100 if total > 0 else 0
-    filled = int(progress_pct / 10)
-    progress_bar = "🟩" * filled + "⬜" * (10 - filled)
+کدوم سطح رو انجام دادی?
+━━━━━━━━━━━━━━━━━━━━━━━━"""
 
-    msg = f"📋 عادت‌های امروز ({today}):\n\n"
-    msg += f"پیشرفت: {progress_bar} {progress_pct:.0f}%\n"
-    msg += f"انجام شده: {completed_count}/{total}\n\n"
-    if completed_count == total and total > 0:
-        msg += "🏆 تبریک! همه عادت‌ها انجام شد! 🎉\n\n"
+        keyboard = level_picker_keyboard(habit_key)
+        await query.edit_message_text(msg, reply_markup=keyboard)
+        await query.answer()
 
-    keyboard = []
-    for habit in habits:
-        status = "✅" if habit["completed"] else "⬜"
-        streak = db.get_streak(habit["id"])
-        streak_text = f" 🔥{streak}" if streak > 0 else ""
-        btn_text = f"{status} {habit['name']}{streak_text}"
-        keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"toggle_{habit['id']}")])
-    keyboard.append([InlineKeyboardButton("🔄 بروزرسانی", callback_data="refresh_habits")])
+    elif data.startswith("log_"):
+        # Log habit at specific level
+        parts = data.split("_")
+        habit_key = parts[1]
+        level = parts[2]
+        habit = HABITS[habit_key]
+        level_info = habit["levels"][level]
 
-    await query.edit_message_text(text=msg, reply_markup=InlineKeyboardMarkup(keyboard))
+        result = db.log_habit(user_id, habit_key, date, level)
 
+        if result:
+            await query.answer(f"✅ {habit['name']} — {level_info['name']} ثبت شد! 🎉")
+        else:
+            await query.answer(f"↩️ {habit['name']} برداشته شد.")
 
-# ── Add Habit ────────────────────────────────────────────────────────────────
+        # Go back to habits view
+        status = db.get_today_status(user_id, date)
+        done = sum(1 for v in status.values() if v is not None)
 
-async def add_habit_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "➕ نام عادت جدید رو بنویس:\n(مثلا: ورزش، مطالعه، مدیتیشن)",
-        reply_markup=ReplyKeyboardRemove(),
-    )
-    return ADD_HABIT_NAME
+        if done == 0:
+            progress = "⬜⬜⬜"
+            header = "🌅 هنوز شروع نکردی!"
+        elif done == 1:
+            progress = "🟩⬜⬜"
+            header = "👍 یکی انجام شد!"
+        elif done == 2:
+            progress = "🟩🟩⬜"
+            header = "🔥 فقط یکی مونده!"
+        else:
+            progress = "🟩🟩🟩"
+            header = "🏆 روز کامل! 🎉"
 
+        msg = f"""📋 وضعیت امروز — {date}
 
-async def add_habit_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["new_habit_name"] = update.message.text.strip()
-    await update.message.reply_text("📝 توضیحات (اختیاری):\n/skip برای رد شدن")
-    return ADD_HABIT_DESCRIPTION
+{progress}  {done}/3  {header}
 
+━━━━━━━━━━━━━━━━━━━━━━━━
+روی هر عادت کلیک کن تا سطحش رو انتخاب کنی:
+━━━━━━━━━━━━━━━━━━━━━━━━"""
 
-async def add_habit_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.text == "/skip":
-        context.user_data["new_habit_desc"] = ""
-    else:
-        context.user_data["new_habit_desc"] = update.message.text.strip()
+        if done == 3 and result:
+            msg += f"\n\n{get_motivational()}"
 
-    keyboard = [["روزانه", "روزهای کاری"], ["فقط آخر هفته", "سفارشی"]]
-    await update.message.reply_text(
-        "📅 تکرار عادت؟",
-        reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True),
-    )
-    return ADD_HABIT_FREQUENCY
+        keyboard = habit_inline_keyboard(user_id, date)
+        await query.edit_message_text(msg, reply_markup=keyboard)
 
+    elif data == "course_toggle":
+        new_state = db.log_course(user_id, date)
+        streak = db.get_course_streak(user_id)
 
-async def add_habit_frequency(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    freq_map = {"روزانه": "daily", "روزهای کاری": "weekdays", "فقط آخر هفته": "weekends", "سفارشی": "custom"}
-    frequency = freq_map.get(update.message.text.strip(), "daily")
-    user_id = update.effective_user.id
-    name = context.user_data.get("new_habit_name", "")
-    desc = context.user_data.get("new_habit_desc", "")
-    db.add_habit(user_id, name, desc, frequency)
+        if new_state:
+            await query.answer("✅ دوره امروز ثبت شد! 🎉")
+        else:
+            await query.answer("↩️ لغو شد.")
 
-    await update.message.reply_text(
-        f"✅ عادت «{name}» اضافه شد! 🎉\n/habits برای مشاهده",
-        reply_markup=get_main_keyboard(),
-    )
-    context.user_data.pop("new_habit_name", None)
-    context.user_data.pop("new_habit_desc", None)
-    return ConversationHandler.END
+        # Update course view
+        watched = db.get_course_today(user_id, date)
+        await _edit_course_message(query, user_id, date, watched, streak)
 
+    elif data == "stats_weekly":
+        await _show_weekly_inline(query, user_id)
+        await query.answer()
 
-async def cancel_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❌ لغو شد.", reply_markup=get_main_keyboard())
-    return ConversationHandler.END
-
-
-# ── Delete Habit ─────────────────────────────────────────────────────────────
-
-async def delete_habit_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    habits = db.get_habits(user_id)
-    if not habits:
-        await update.message.reply_text("عادتی نداری! 🤷‍♂️", reply_markup=get_main_keyboard())
-        return
-
-    keyboard = []
-    for habit in habits:
-        keyboard.append([InlineKeyboardButton(f"🗑 {habit['name']}", callback_data=f"delete_{habit['id']}")])
-    keyboard.append([InlineKeyboardButton("❌ انصراف", callback_data="cancel_delete")])
-    await update.message.reply_text("کدوم رو حذف کنم?", reply_markup=InlineKeyboardMarkup(keyboard))
-
-
-async def delete_habit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    if query.data == "cancel_delete":
-        await query.edit_message_text("❌ لغو شد.")
-        return
-    if query.data.startswith("delete_"):
-        habit_id = int(query.data.split("_")[1])
-        habit = db.get_habit(habit_id)
-        if habit:
-            db.delete_habit(habit_id)
-            await query.edit_message_text(f"✅ «{habit['name']}» حذف شد.")
-
-
-# ── Statistics ───────────────────────────────────────────────────────────────
-
-async def show_weekly_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
-    stats = db.get_weekly_stats(user_id)
-    habits = db.get_habits(user_id)
-
-    if not habits:
-        await update.message.reply_text("اول عادت اضافه کن! /add", reply_markup=get_main_keyboard())
-        return
-
-    msg = f"📊 آمار هفتگی:\n\n"
-    msg += f"📈 درصد: {stats['percentage']}%\n"
-    msg += f"✅ انجام: {stats['total_completed']}/{stats['total_possible']}\n\n"
-    msg += "📅 جزئیات:\n"
-    for day_stat in stats["daily"]:
-        pct = (day_stat["completed"] / day_stat["total"] * 100) if day_stat["total"] > 0 else 0
-        bar = "🟩" * int(pct / 20) + "⬜" * (5 - int(pct / 20))
-        msg += f"  {day_stat['date']}: {bar} {day_stat['completed']}/{day_stat['total']}\n"
-
-    msg += "\n🔥 استریک‌ها:\n"
-    for habit in habits:
-        streak = db.get_streak(habit["id"])
-        if streak > 0:
-            msg += f"  {habit['name']}: {streak} روز\n"
-
-    await update.message.reply_text(msg, reply_markup=get_main_keyboard())
-
-
-async def show_monthly_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
-    stats = db.get_monthly_stats(user_id)
-    habits = db.get_habits(user_id)
-
-    if not habits:
-        await update.message.reply_text("اول عادت اضافه کن! /add", reply_markup=get_main_keyboard())
-        return
-
-    msg = f"📈 آمار ماهانه (۳۰ روز):\n\n"
-    msg += f"📊 درصد: {stats['percentage']}%\n"
-    msg += f"✅ انجام: {stats['total_completed']}/{stats['total_possible']}\n\n"
-
-    if stats["percentage"] >= 90:
-        msg += "🏆 فوق‌العاده! ادامه بده! 💪"
-    elif stats["percentage"] >= 70:
-        msg += "👏 عالی! خوب پیش میری!"
-    elif stats["percentage"] >= 50:
-        msg += "💪 خوبه ولی بهتر هم میشه!"
-    else:
-        msg += "⚠️ بیشتر تلاش کن! از کوچیک شروع کن."
-
-    await update.message.reply_text(msg, reply_markup=get_main_keyboard())
+    elif data == "stats_monthly":
+        await _show_monthly_inline(query, user_id)
+        await query.answer()
 
 
 # ── Course ───────────────────────────────────────────────────────────────────
 
+
 async def show_course(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
-    today = get_today()
+    date = today_str()
+    watched = db.get_course_today(user_id, date)
     streak = db.get_course_streak(user_id)
 
-    conn = db.get_connection()
-    try:
-        row = conn.execute(
-            "SELECT * FROM course_progress WHERE user_id = ? AND date = ?", (user_id, today)
-        ).fetchone()
-        watched_today = row and row["watched"] if row else False
-    finally:
-        conn.close()
-
-    status = "✅ دیدم" if watched_today else "⬜ هنوز ندیدم"
-    msg = f"📚 دوره آموزشی عادت‌سازی\n\n📅 امروز: {status}\n🔥 استریک: {streak} روز\n"
-    if not watched_today:
-        msg += "\n💡 امروز حتما یه جلسه ببین!"
-
-    keyboard = [[InlineKeyboardButton(
-        "✅ امروز دیدم!" if not watched_today else "↩️ لغو",
-        callback_data="course_toggle",
-    )]]
-    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+    msg = _course_message(watched, streak)
+    keyboard = _course_keyboard(watched)
+    await update.message.reply_text(msg, reply_markup=keyboard)
 
 
-async def _show_course_inline(query, user_id: int):
-    today = get_today()
-    streak = db.get_course_streak(user_id)
-    conn = db.get_connection()
-    try:
-        row = conn.execute(
-            "SELECT * FROM course_progress WHERE user_id = ? AND date = ?", (user_id, today)
-        ).fetchone()
-        watched_today = row and row["watched"] if row else False
-    finally:
-        conn.close()
+def _course_message(watched: bool, streak: dict) -> str:
+    status = "✅ دیدم" if watched else "⬜ هنوز ندیدم"
+    fire = f"🔥 {streak['current_streak']} روز متوالی" if streak["current_streak"] > 0 else "💤 هنوز استریکی نداری"
+    best = f"🏆 بهترین: {streak['best_streak']} روز" if streak["best_streak"] > 0 else ""
 
-    status = "✅ دیدم" if watched_today else "⬜ هنوز ندیدم"
-    msg = f"📚 دوره آموزشی عادت‌سازی\n\n📅 امروز: {status}\n🔥 استریک: {streak} روز\n"
-    if watched_today:
-        msg += "\n🎉 آفرین! ادامه بده!"
+    msg = f"""📚 دوره آموزشی عادت‌سازی
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+📅 امروز: {status}
+{fire}
+{best}
+━━━━━━━━━━━━━━━━━━━━━━━━"""
+
+    if not watched:
+        msg += "\n\n💡 حتی ۵ دقیقه هم ارزشمنده! شروع کن!"
+
+    return msg
+
+
+def _course_keyboard(watched: bool) -> InlineKeyboardMarkup:
+    if watched:
+        btn = InlineKeyboardButton("↩️ لغو ثبت امروز", callback_data="course_toggle")
     else:
-        msg += "\n💡 امروز حتما یه جلسه ببین!"
-
-    keyboard = [[InlineKeyboardButton(
-        "✅ امروز دیدم!" if not watched_today else "↩️ لغو",
-        callback_data="course_toggle",
-    )]]
-    await query.edit_message_text(msg, reply_markup=InlineKeyboardMarkup(keyboard))
+        btn = InlineKeyboardButton("✅ امروز دوره رو دیدم!", callback_data="course_toggle")
+    return InlineKeyboardMarkup([[btn]])
 
 
-# ── Reminders ────────────────────────────────────────────────────────────────
-
-async def show_reminders(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
-    reminders = db.get_reminders(user_id)
-
-    if not reminders:
-        await update.message.reply_text("یادآوری نداری.\n/addreminder HH:MM", reply_markup=get_main_keyboard())
-        return
-
-    msg = "⏰ یادآوری‌ها:\n\n"
-    for r in reminders:
-        icon = "📚" if r["reminder_type"] == "course" else "📋"
-        name = "دوره" if r["reminder_type"] == "course" else "عادت‌ها"
-        msg += f"  {icon} {r['time']} - {name}\n"
-    msg += "\n/addreminder HH:MM - افزودن\n/removereminder - حذف"
-    await update.message.reply_text(msg, reply_markup=get_main_keyboard())
+async def _edit_course_message(query, user_id: int, date: str, watched: bool, streak: dict):
+    msg = _course_message(watched, streak)
+    keyboard = _course_keyboard(watched)
+    await query.edit_message_text(msg, reply_markup=keyboard)
 
 
-async def add_reminder_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ── Statistics ───────────────────────────────────────────────────────────────
+
+
+async def show_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
 
-    if not context.args:
-        await update.message.reply_text("مثال: /addreminder 08:30", reply_markup=get_main_keyboard())
-        return
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📊 آمار هفتگی", callback_data="stats_weekly")],
+        [InlineKeyboardButton("📈 آمار ماهانه", callback_data="stats_monthly")],
+    ])
 
-    time_str = context.args[0].strip()
-    try:
-        hour, minute = map(int, time_str.split(":"))
-        if not (0 <= hour <= 23 and 0 <= minute <= 59):
-            raise ValueError()
-        time_str = f"{hour:02d}:{minute:02d}"
-    except (ValueError, IndexError):
-        await update.message.reply_text("❌ فرمت اشتباه! مثال: 08:30", reply_markup=get_main_keyboard())
-        return
-
-    reminder_type = "habit"
-    if len(context.args) > 1 and context.args[1].lower() in ("course", "دوره"):
-        reminder_type = "course"
-
-    db.add_reminder(user_id, time_str, reminder_type)
-    await update.message.reply_text(f"✅ یادآوری {time_str} اضافه شد!", reply_markup=get_main_keyboard())
+    await update.message.reply_text("📊 کدوم آمار رو می‌خوای ببینی?", reply_markup=keyboard)
 
 
-async def remove_reminder_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def _show_weekly_inline(query, user_id: int):
+    stats = db.get_weekly_stats(user_id)
+
+    # Progress bar
+    pct = stats["percentage"]
+    filled = int(pct / 10)
+    bar = "🟩" * filled + "⬜" * (10 - filled)
+
+    msg = f"""📊 آمار ۷ روز اخیر
+
+{bar} {pct}%
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ انجام شده: {stats['total_completed']}/{stats['total_possible']}
+🏆 روزهای کامل: {stats['perfect_days']}/7
+
+📋 عملکرد هر عادت:
+"""
+    for key in HABIT_ORDER:
+        habit = HABITS[key]
+        count = stats["per_habit"][key]
+        h_bar = "🟩" * count + "⬜" * (7 - count)
+        msg += f"  {habit['icon']} {habit['name']}: {h_bar} {count}/7\n"
+
+    streaks = db.get_all_streaks(user_id)
+    msg += "\n🔥 استریک فعلی:\n"
+    for key in HABIT_ORDER:
+        habit = HABITS[key]
+        s = streaks[key]
+        msg += f"  {habit['icon']} {s['current_streak']} روز (بهترین: {s['best_streak']})\n"
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📈 آمار ماهانه", callback_data="stats_monthly")],
+    ])
+    await query.edit_message_text(msg, reply_markup=keyboard)
+
+
+async def _show_monthly_inline(query, user_id: int):
+    stats = db.get_monthly_stats(user_id)
+
+    pct = stats["percentage"]
+    filled = int(pct / 10)
+    bar = "🟩" * filled + "⬜" * (10 - filled)
+
+    msg = f"""📈 آمار ۳۰ روز اخیر
+
+{bar} {pct}%
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ انجام شده: {stats['total_completed']}/{stats['total_possible']}
+📚 دوره تماشا شده: {stats['course_days']}/30 روز
+
+📊 توزیع سطوح:
+  🟢 لقمه کوچک: {stats['levels']['small']} بار
+  🟡 لقمه ویژه: {stats['levels']['special']} بار
+  🔴 لقمه اضطراری: {stats['levels']['emergency']} بار
+"""
+
+    # Motivational based on percentage
+    if pct >= 90:
+        msg += "\n🏆 فوق‌العاده‌ای! ادامه بده! 💎"
+    elif pct >= 70:
+        msg += "\n👏 عالی! خیلی خوب پیش میری!"
+    elif pct >= 50:
+        msg += "\n💪 خوبه! هر روز یکم بهتر!"
+    elif pct >= 30:
+        msg += "\n🌱 شروع خوبیه! ادامه بده!"
+    else:
+        msg += "\n⚡ امروز رو با انرژی شروع کن!"
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📊 آمار هفتگی", callback_data="stats_weekly")],
+    ])
+    await query.edit_message_text(msg, reply_markup=keyboard)
+
+
+# ── Streaks ──────────────────────────────────────────────────────────────────
+
+
+async def show_streaks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    reminders = db.get_reminders(user_id)
-    if not reminders:
-        await update.message.reply_text("یادآوری نداری! 🤷‍♂️", reply_markup=get_main_keyboard())
-        return
+    db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+    streaks = db.get_all_streaks(user_id)
+    course_streak = db.get_course_streak(user_id)
 
-    keyboard = []
-    for r in reminders:
-        icon = "📚" if r["reminder_type"] == "course" else "📋"
-        keyboard.append([InlineKeyboardButton(f"{icon} {r['time']}", callback_data=f"rmreminder_{r['id']}")])
-    keyboard.append([InlineKeyboardButton("❌ انصراف", callback_data="cancel_rmreminder")])
-    await update.message.reply_text("کدوم رو حذف کنم?", reply_markup=InlineKeyboardMarkup(keyboard))
+    msg = """🔥 استریک‌های من
 
+━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+    for key in HABIT_ORDER:
+        habit = HABITS[key]
+        s = streaks[key]
+        current = s["current_streak"]
+        best = s["best_streak"]
 
-async def remove_reminder_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    if query.data == "cancel_rmreminder":
-        await query.edit_message_text("❌ لغو شد.")
-        return
-    if query.data.startswith("rmreminder_"):
-        reminder_id = int(query.data.split("_")[1])
-        db.remove_reminder(reminder_id)
-        await query.edit_message_text("✅ حذف شد.")
+        # Visual streak indicator
+        if current >= 30:
+            fire = "🌟"
+        elif current >= 14:
+            fire = "💎"
+        elif current >= 7:
+            fire = "🔥"
+        elif current >= 3:
+            fire = "✨"
+        else:
+            fire = "💤"
+
+        msg += f"\n{habit['icon']} {habit['name']}\n"
+        msg += f"  {fire} فعلی: {current} روز\n"
+        msg += f"  🏆 بهترین: {best} روز\n"
+
+    msg += f"\n📚 دوره آموزشی\n"
+    msg += f"  {'🔥' if course_streak['current_streak'] > 0 else '💤'} فعلی: {course_streak['current_streak']} روز\n"
+    msg += f"  🏆 بهترین: {course_streak['best_streak']} روز\n"
+
+    msg += "\n━━━━━━━━━━━━━━━━━━━━━━━━"
+    msg += f"\n\n{get_motivational()}"
+
+    await update.message.reply_text(msg, reply_markup=main_menu_keyboard())
 
 
 # ── Pause/Resume ─────────────────────────────────────────────────────────────
 
-async def pause_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def cmd_pause(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    conn = db.get_connection()
-    try:
-        conn.execute("UPDATE users SET is_active = 0 WHERE user_id = ?", (user_id,))
-        conn.commit()
-    finally:
-        conn.close()
-    await update.message.reply_text("⏸ یادآوری‌ها متوقف شد.\n/resume برای ادامه", reply_markup=get_main_keyboard())
+    db.set_paused(user_id, True)
+    await update.message.reply_text(
+        "⏸ یادآوری‌ها متوقف شد.\n\n/resume برای فعال‌سازی مجدد",
+        reply_markup=main_menu_keyboard(),
+    )
 
 
-async def resume_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cmd_resume(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    conn = db.get_connection()
-    try:
-        conn.execute("UPDATE users SET is_active = 1 WHERE user_id = ?", (user_id,))
-        conn.commit()
-    finally:
-        conn.close()
-    await update.message.reply_text("▶️ یادآوری‌ها فعال شد! 🔔", reply_markup=get_main_keyboard())
+    db.set_paused(user_id, False)
+    await update.message.reply_text(
+        "▶️ یادآوری‌ها فعال شد! 🔔\n\nمنتظر یادآوری‌های بعدی باش!",
+        reply_markup=main_menu_keyboard(),
+    )
 
 
-# ── Text Handler ─────────────────────────────────────────────────────────────
+# ── Text Message Handler ─────────────────────────────────────────────────────
+
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    handlers = {
-        "📋 عادت‌های امروز": show_habits,
-        "📊 آمار هفتگی": show_weekly_stats,
-        "📈 آمار ماهانه": show_monthly_stats,
-        "📚 دوره آموزشی": show_course,
-        "⏰ تنظیم یادآوری": show_reminders,
-        "🗑 حذف عادت": delete_habit_start,
-        "ℹ️ راهنما": help_command,
-    }
+    text = update.message.text.strip()
 
-    if text == "➕ افزودن عادت":
-        await update.message.reply_text(
-            "➕ نام عادت جدید رو بنویس:",
-            reply_markup=ReplyKeyboardRemove(),
-        )
-        return ADD_HABIT_NAME
-
-    handler = handlers.get(text)
-    if handler:
-        await handler(update, context)
+    if text == "📋 وضعیت امروز":
+        await show_today_status(update, context)
+    elif text == "📚 دوره آموزشی":
+        await show_course(update, context)
+    elif text == "📊 آمار":
+        await show_stats(update, context)
+    elif text == "🔥 استریک‌ها":
+        await show_streaks(update, context)
+    elif text == "ℹ️ راهنما":
+        await cmd_help(update, context)
     else:
-        await update.message.reply_text("🤔 از دکمه‌ها یا /help استفاده کن.", reply_markup=get_main_keyboard())
+        await update.message.reply_text(
+            "🤔 از دکمه‌های منو استفاده کن!\n\n/help برای راهنما",
+            reply_markup=main_menu_keyboard(),
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Scheduled Jobs
+# Scheduled Jobs (Reminders)
 # ─────────────────────────────────────────────────────────────────────────────
 
-async def send_reminder(context: ContextTypes.DEFAULT_TYPE):
-    now = datetime.now()
-    current_time = f"{now.hour:02d}:{now.minute:02d}"
-    reminders = db.get_all_reminders_at_time(current_time)
 
-    for reminder in reminders:
-        user_id = reminder["user_id"]
-        try:
-            if reminder["reminder_type"] == "course":
-                streak = db.get_course_streak(user_id)
-                msg = COURSE_REMINDER_MSG
-                if streak > 0:
-                    msg += f"\n\n🔥 استریک: {streak} روز - نذار قطع بشه!"
-                keyboard = [[InlineKeyboardButton("✅ الان دیدم!", callback_data="course_toggle")]]
-                await context.bot.send_message(chat_id=user_id, text=msg, reply_markup=InlineKeyboardMarkup(keyboard))
-            else:
-                today = get_today()
-                habits = db.get_today_status(user_id, today)
-                if not habits:
-                    continue
-                incomplete = [h for h in habits if not h["completed"]]
-                if not incomplete:
-                    await context.bot.send_message(
-                        chat_id=user_id,
-                        text="🏆 همه عادت‌ها انجام شده! آفرین! 💪",
-                    )
-                else:
-                    msg = f"⏰ یادآوری!\n\n{len(incomplete)} عادت مونده:\n\n"
-                    for h in incomplete:
-                        msg += f"  ⬜ {h['name']}\n"
-                    msg += "\n💪 الان یکی رو انجام بده!"
-                    keyboard = []
-                    for h in incomplete[:5]:
-                        keyboard.append([InlineKeyboardButton(f"✅ {h['name']}", callback_data=f"toggle_{h['id']}")])
-                    await context.bot.send_message(chat_id=user_id, text=msg, reply_markup=InlineKeyboardMarkup(keyboard))
-        except Exception as e:
-            logger.error(f"Reminder error for {user_id}: {e}")
-
-
-async def daily_summary_job(context: ContextTypes.DEFAULT_TYPE):
+async def job_course_reminder(context: ContextTypes.DEFAULT_TYPE):
+    """Send course reminder to all active users who haven't watched today."""
+    import random
+    date = today_str()
     users = db.get_all_active_users()
-    today = get_today()
-    for user in users:
-        user_id = user["user_id"]
+
+    for user_id in users:
         try:
-            habits = db.get_today_status(user_id, today)
-            if not habits:
-                continue
-            completed_count = sum(1 for h in habits if h["completed"])
-            total = len(habits)
-            pct = completed_count / total * 100 if total > 0 else 0
+            if db.get_course_today(user_id, date):
+                continue  # Already watched
 
-            msg = f"🌙 خلاصه امروز:\n\n✅ {completed_count}/{total} ({pct:.0f}%)\n\n"
-            for h in habits:
-                status = "✅" if h["completed"] else "❌"
-                msg += f"  {status} {h['name']}\n"
+            streak = db.get_course_streak(user_id)
+            msg = random.choice(COURSE_MSGS)
 
-            if pct == 100:
-                msg += "\n🏆 عالی بود! فردا هم ادامه بده! 🎉"
-            elif pct >= 50:
-                msg += "\n👍 بد نبود! فردا بهتر! 💪"
+            if streak["current_streak"] > 0:
+                msg += f"\n\n🔥 استریک: {streak['current_streak']} روز — نذار قطع بشه!"
+            elif streak["best_streak"] > 0:
+                msg += f"\n\n💪 بهترین رکوردت {streak['best_streak']} روز بود. بیا رکورد بزن!"
+
+            keyboard = InlineKeyboardMarkup([
+                [InlineKeyboardButton("✅ الان دیدم!", callback_data="course_toggle")],
+            ])
+            await context.bot.send_message(chat_id=user_id, text=msg, reply_markup=keyboard)
+        except Exception as e:
+            logger.error(f"Course reminder error for {user_id}: {e}")
+
+
+async def job_habit_reminder(context: ContextTypes.DEFAULT_TYPE):
+    """Send habit reminder to users with incomplete habits."""
+    date = today_str()
+    users = db.get_all_active_users()
+
+    for user_id in users:
+        try:
+            status = db.get_today_status(user_id, date)
+            incomplete = [key for key in HABIT_ORDER if status[key] is None]
+
+            if not incomplete:
+                continue  # All done!
+
+            done = 3 - len(incomplete)
+
+            if done == 0:
+                msg = "⏰ یادآوری عادت‌ها!\n\nهنوز هیچ‌کدوم رو انجام ندادی 😅\n"
+            elif done == 1:
+                msg = "⏰ یکی انجام شده! دوتای دیگه مونده 💪\n"
             else:
-                msg += "\n💡 فردا صبح زود شروع کن!"
+                msg = "⏰ فقط یکی مونده! تمومش کن! 🔥\n"
+
+            msg += "\n"
+            for key in incomplete:
+                habit = HABITS[key]
+                msg += f"  ⬜ {habit['icon']} {habit['name']}\n"
+
+            msg += f"\n💡 یادت باشه: حتی لقمه اضطراری هم حساب میشه!"
+            msg += f"\n\n{get_motivational()}"
+
+            # Quick action buttons
+            keyboard = []
+            for key in incomplete[:3]:
+                habit = HABITS[key]
+                keyboard.append([InlineKeyboardButton(
+                    f"{habit['icon']} {habit['name']} انجام بده!",
+                    callback_data=f"pick_{key}",
+                )])
+
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=msg,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+        except Exception as e:
+            logger.error(f"Habit reminder error for {user_id}: {e}")
+
+
+async def job_daily_summary(context: ContextTypes.DEFAULT_TYPE):
+    """Send nightly summary."""
+    date = today_str()
+    users = db.get_all_active_users()
+
+    for user_id in users:
+        try:
+            status = db.get_today_status(user_id, date)
+            done = sum(1 for v in status.values() if v is not None)
+            course_watched = db.get_course_today(user_id, date)
+
+            # Build summary
+            if done == 3:
+                progress = "🟩🟩🟩"
+                header = "🏆 روز عالی بود!"
+            elif done == 2:
+                progress = "🟩🟩⬜"
+                header = "👍 بد نبود!"
+            elif done == 1:
+                progress = "🟩⬜⬜"
+                header = "یکی بهتر از هیچی!"
+            else:
+                progress = "⬜⬜⬜"
+                header = "فردا جبران کن! 💪"
+
+            msg = f"🌙 خلاصه امروز\n\n{progress} {done}/3 — {header}\n\n"
+
+            for key in HABIT_ORDER:
+                habit = HABITS[key]
+                log = status[key]
+                if log:
+                    level_info = habit["levels"][log["level"]]
+                    msg += f"  ✅ {habit['icon']} {habit['name']} ({level_info['icon']})\n"
+                else:
+                    msg += f"  ❌ {habit['icon']} {habit['name']}\n"
+
+            msg += f"\n📚 دوره: {'✅ دیدم' if course_watched else '❌ ندیدم'}\n"
+
+            # Streaks preview
+            streaks = db.get_all_streaks(user_id)
+            msg += "\n🔥 استریک‌ها: "
+            streak_parts = []
+            for key in HABIT_ORDER:
+                s = streaks[key]["current_streak"]
+                if s > 0:
+                    streak_parts.append(f"{HABITS[key]['icon']}{s}")
+            if streak_parts:
+                msg += " | ".join(streak_parts)
+            else:
+                msg += "—"
+
+            msg += f"\n\n{'🌟 ' + get_motivational() if done > 0 else '💡 فردا صبح از نو شروع کن!'}"
+            msg += "\n\nشب بخیر! 🌙"
 
             await context.bot.send_message(chat_id=user_id, text=msg)
         except Exception as e:
@@ -968,56 +1260,70 @@ async def daily_summary_job(context: ContextTypes.DEFAULT_TYPE):
 # Main
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def main():
     if not BOT_TOKEN:
-        print("❌ TELEGRAM_BOT_TOKEN not set!")
+        print("❌ Error: TELEGRAM_BOT_TOKEN environment variable not set!")
+        print("   export TELEGRAM_BOT_TOKEN='your-token'")
         sys.exit(1)
 
-    print("🤖 Starting Habit Tracker Bot...")
+    print("🤖 Habit Tracker Bot v2.0 Starting...")
     print(f"📂 Database: {DB_PATH}")
+    print(f"🕌 Habits: {', '.join(h['name'] for h in HABITS.values())}")
 
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # Conversation handler
-    add_habit_conv = ConversationHandler(
-        entry_points=[CommandHandler("add", add_habit_start)],
-        states={
-            ADD_HABIT_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_habit_name)],
-            ADD_HABIT_DESCRIPTION: [
-                MessageHandler(filters.TEXT & ~filters.Regex("^/skip$"), add_habit_description),
-                CommandHandler("skip", add_habit_description),
-            ],
-            ADD_HABIT_FREQUENCY: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_habit_frequency)],
-        },
-        fallbacks=[CommandHandler("cancel", cancel_conversation)],
-        allow_reentry=True,
-    )
-
-    # Handlers
-    app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("habits", show_habits))
-    app.add_handler(CommandHandler("stats", show_weekly_stats))
-    app.add_handler(CommandHandler("monthly", show_monthly_stats))
+    # Command handlers
+    app.add_handler(CommandHandler("start", cmd_start))
+    app.add_handler(CommandHandler("help", cmd_help))
+    app.add_handler(CommandHandler("habits", show_today_status))
+    app.add_handler(CommandHandler("today", show_today_status))
     app.add_handler(CommandHandler("course", show_course))
-    app.add_handler(CommandHandler("reminders", show_reminders))
-    app.add_handler(CommandHandler("addreminder", add_reminder_command))
-    app.add_handler(CommandHandler("removereminder", remove_reminder_command))
-    app.add_handler(CommandHandler("delete", delete_habit_start))
-    app.add_handler(CommandHandler("pause", pause_command))
-    app.add_handler(CommandHandler("resume", resume_command))
-    app.add_handler(add_habit_conv)
-    app.add_handler(CallbackQueryHandler(toggle_habit_callback, pattern=r"^(toggle_|refresh_habits|course_toggle)"))
-    app.add_handler(CallbackQueryHandler(delete_habit_callback, pattern=r"^(delete_|cancel_delete)"))
-    app.add_handler(CallbackQueryHandler(remove_reminder_callback, pattern=r"^(rmreminder_|cancel_rmreminder)"))
+    app.add_handler(CommandHandler("stats", show_stats))
+    app.add_handler(CommandHandler("streaks", show_streaks))
+    app.add_handler(CommandHandler("pause", cmd_pause))
+    app.add_handler(CommandHandler("resume", cmd_resume))
+
+    # Callback handler (all inline buttons)
+    app.add_handler(CallbackQueryHandler(callback_handler))
+
+    # Text handler (reply keyboard)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
-    # Jobs
-    job_queue = app.job_queue
-    job_queue.run_repeating(send_reminder, interval=60, first=10)
-    job_queue.run_daily(daily_summary_job, time=time(hour=22, minute=0))
+    # ── Schedule Jobs ────────────────────────────────────────────────────────
 
-    print("✅ Bot running! Ctrl+C to stop.")
+    job_queue = app.job_queue
+
+    # Course reminders (multiple per day)
+    for hour, minute in COURSE_REMINDER_TIMES:
+        job_queue.run_daily(
+            job_course_reminder,
+            time=time(hour=hour, minute=minute),
+            name=f"course_{hour:02d}{minute:02d}",
+        )
+
+    # Habit reminders
+    for hour, minute in HABIT_REMINDER_TIMES:
+        job_queue.run_daily(
+            job_habit_reminder,
+            time=time(hour=hour, minute=minute),
+            name=f"habit_{hour:02d}{minute:02d}",
+        )
+
+    # Daily summary
+    job_queue.run_daily(
+        job_daily_summary,
+        time=time(hour=SUMMARY_TIME[0], minute=SUMMARY_TIME[1]),
+        name="daily_summary",
+    )
+
+    # ── Run ──────────────────────────────────────────────────────────────────
+
+    print("✅ Bot running! Press Ctrl+C to stop.")
+    print(f"⏰ Course reminders: {', '.join(f'{h:02d}:{m:02d}' for h, m in COURSE_REMINDER_TIMES)}")
+    print(f"⏰ Habit reminders: {', '.join(f'{h:02d}:{m:02d}' for h, m in HABIT_REMINDER_TIMES)}")
+    print(f"🌙 Daily summary: {SUMMARY_TIME[0]:02d}:{SUMMARY_TIME[1]:02d}")
+
     app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
 
 
