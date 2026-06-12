@@ -18,7 +18,11 @@ from config import (
     HABITS, HABIT_ORDER, ACHIEVEMENTS, LEVELS,
     MOTIVATIONAL_MSGS, XP_COURSE_WATCHED, XP_JOURNAL_WRITTEN,
     TOTAL_CHELLE, DAYS_PER_CHELLE, SESSION_DURATION_MINUTES,
+    DAILY_CHALLENGES, XP_CHALLENGE_BONUS,
+    JOURNEY_MILESTONES, NIGHTLY_QUESTIONS,
+    COACH_TIPS, ANALYSIS_INTERVAL_DAYS,
 )
+from datetime import timedelta
 from db import Database
 from gamification import Gamification
 
@@ -37,9 +41,10 @@ def today_str() -> str:
 def main_keyboard() -> ReplyKeyboardMarkup:
     keyboard = [
         ["📋 وضعیت امروز", "📚 دوره"],
+        ["🃏 چالش روز", "🗺️ نقشه سفر"],
         ["📊 آمار", "🏆 دستاوردها"],
         ["📝 تحلیل", "🔥 استریک"],
-        ["ℹ️ راهنما"],
+        ["📅 تقویم", "ℹ️ راهنما"],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -821,6 +826,7 @@ def _is_menu_button(text: str) -> bool:
     menu_items = [
         "📋 وضعیت امروز", "📚 دوره", "📊 آمار",
         "🏆 دستاوردها", "📝 تحلیل", "🔥 استریک", "ℹ️ راهنما",
+        "🃏 چالش روز", "🗺️ نقشه سفر", "📅 تقویم",
     ]
     return text in menu_items
 
@@ -848,6 +854,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await show_journal(update, context)
         elif text == "🔥 استریک":
             await show_streaks(update, context)
+        elif text == "🃏 چالش روز":
+            await show_daily_challenge(update, context)
+        elif text == "🗺️ نقشه سفر":
+            await show_journey_map(update, context)
+        elif text == "📅 تقویم":
+            await show_monthly_calendar(update, context)
         elif text == "ℹ️ راهنما":
             await cmd_help(update, context)
         return
@@ -920,3 +932,384 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🤔 از دکمه‌های منو استفاده کن!\n/help برای راهنما",
         reply_markup=main_keyboard(),
     )
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🃏 Daily Challenge (چالش روزانه)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _get_today_challenge() -> dict:
+    """Get today's challenge based on day of year."""
+    day_of_year = datetime.now().timetuple().tm_yday
+    idx = day_of_year % len(DAILY_CHALLENGES)
+    return DAILY_CHALLENGES[idx]
+
+
+async def show_daily_challenge(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show today's daily challenge."""
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        gm = _get_gm(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+
+        challenge = _get_today_challenge()
+        user = db.get_user(user_id)
+        date = today_str()
+
+        # Check if challenge is completed
+        challenge_done = _check_challenge_complete(user_id, db, challenge, date)
+
+        msg = f"🃏 چالش روزانه\n\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        msg += f"{challenge['text']}\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        msg += f"🎁 جایزه: +{challenge['xp']} XP بونوس!\n\n"
+
+        if challenge_done:
+            msg += f"✅ چالش امروز انجام شد! 🎉\n"
+            msg += f"✨ +{challenge['xp']} XP دریافت کردی!"
+        else:
+            msg += f"⬜ هنوز انجام نشده\n"
+            msg += f"💡 عادت‌هات رو انجام بده تا چالش تکمیل بشه!"
+
+        await update.message.reply_text(msg, reply_markup=main_keyboard())
+    except Exception as e:
+        logger.error(f"show_daily_challenge error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())
+
+
+def _check_challenge_complete(user_id: int, db: Database, challenge: dict, date: str) -> bool:
+    """Check if today's challenge is completed."""
+    habits = db.get_today_habits(user_id, date)
+    condition = challenge["condition"]
+
+    if condition == "all_small":
+        return all(habits[k] and habits[k]["level"] == "small" for k in HABIT_ORDER)
+    elif condition == "early_habit":
+        for k in HABIT_ORDER:
+            if habits[k] and habits[k]["completed_at"]:
+                hour = int(habits[k]["completed_at"][11:13])
+                if hour < 8:
+                    return True
+        return False
+    elif condition == "course_first":
+        course = db.get_course_today(user_id, date)
+        return course is not None
+    elif condition == "perfect_journal":
+        done = sum(1 for v in habits.values() if v is not None)
+        journal = db.get_journal(user_id, date)
+        return done >= 3 and journal is not None
+    elif condition == "namaz_small":
+        return habits["namaz"] is not None and habits["namaz"]["level"] == "small"
+    elif condition == "exercise_small":
+        return habits["exercise"] is not None and habits["exercise"]["level"] == "small"
+    elif condition == "sleep_small":
+        return habits["sleep"] is not None and habits["sleep"]["level"] == "small"
+    elif condition == "any_done":
+        return any(v is not None for v in habits.values())
+    elif condition == "fast_complete":
+        done = sum(1 for v in habits.values() if v is not None)
+        if done < 3:
+            return False
+        for k in HABIT_ORDER:
+            if habits[k] and habits[k]["completed_at"]:
+                hour = int(habits[k]["completed_at"][11:13])
+                if hour >= 15:
+                    return False
+        return True
+    elif condition == "full_day":
+        done = sum(1 for v in habits.values() if v is not None)
+        course = db.get_course_today(user_id, date)
+        journal = db.get_journal(user_id, date)
+        return done >= 3 and course is not None and journal is not None
+    return False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🗺️ Journey Map (نقشه سفر)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def show_journey_map(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show the 9-chelle journey map."""
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        gm = _get_gm(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+
+        user = db.get_user(user_id)
+        current_chelle = user["course_chelle"] if user else 1
+        total_stats = db.get_total_stats(user_id)
+
+        msg = f"🗺️ نقشه سفر عادت‌سازی\n\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+
+        for milestone in JOURNEY_MILESTONES:
+            chelle_num = milestone["chelle"]
+            if chelle_num < current_chelle:
+                # Completed
+                msg += f"  ✅ {milestone['icon']} چهله {chelle_num}: {milestone['name']}\n"
+            elif chelle_num == current_chelle:
+                # Current - with progress
+                session = user["course_session"] if user else 1
+                progress_in = ((session - 1) % DAYS_PER_CHELLE) + 1
+                pct = int(progress_in / DAYS_PER_CHELLE * 100)
+                bar = "█" * (pct // 10) + "░" * (10 - pct // 10)
+                msg += f"  ▶️ {milestone['icon']} چهله {chelle_num}: {milestone['name']}\n"
+                msg += f"     [{bar}] {pct}% ({progress_in}/{DAYS_PER_CHELLE})\n"
+                msg += f"     📝 {milestone['desc']}\n"
+            else:
+                # Future
+                msg += f"  🔒 ⬜ چهله {chelle_num}: ???\n"
+
+        msg += f"\n━━━━━━━━━━━━━━━━━━━━━━━━\n"
+
+        # Overall progress
+        total_days = (current_chelle - 1) * DAYS_PER_CHELLE
+        session = user["course_session"] if user else 1
+        total_days += ((session - 1) % DAYS_PER_CHELLE) + 1
+        overall_pct = int(total_days / (TOTAL_CHELLE * DAYS_PER_CHELLE) * 100)
+        msg += f"\n📊 پیشرفت کلی: {overall_pct}% ({total_days}/{TOTAL_CHELLE * DAYS_PER_CHELLE} روز)\n"
+        msg += f"✨ XP کل: {total_stats.get('xp', 0)}\n"
+        msg += f"{gm.format_xp_bar(user['xp']) if user else ''}\n"
+
+        # XP Prediction
+        prediction = _predict_level_up(user_id, db, gm)
+        if prediction:
+            msg += f"\n📈 {prediction}"
+
+        await update.message.reply_text(msg, reply_markup=main_keyboard())
+    except Exception as e:
+        logger.error(f"show_journey_map error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 📅 Monthly Calendar (تقویم ماهانه)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+async def show_monthly_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show a 30-day emoji calendar."""
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+
+        today = datetime.now().date()
+        msg = f"📅 تقویم ۳۰ روز اخیر\n\n"
+        msg += f"🟩=کامل  🟨=ناقص  ⬜=خالی  📚=دوره\n"
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+
+        # Build calendar rows (6 rows of 5 days)
+        perfect_count = 0
+        partial_count = 0
+        empty_count = 0
+
+        for row in range(6):
+            line = ""
+            for col in range(5):
+                day_offset = row * 5 + col
+                if day_offset >= 30:
+                    break
+                d = (today - timedelta(days=29 - day_offset)).isoformat()
+
+                # Check status for this day
+                habits = db.get_today_habits(user_id, d)
+                done = sum(1 for v in habits.values() if v is not None)
+                course = db.get_course_today(user_id, d)
+
+                if done == 3:
+                    emoji = "🟩"
+                    perfect_count += 1
+                elif done > 0:
+                    emoji = "🟨"
+                    partial_count += 1
+                else:
+                    emoji = "⬜"
+                    empty_count += 1
+
+                # Add course indicator
+                if course:
+                    emoji += "·"
+                else:
+                    emoji += " "
+
+                line += emoji
+            msg += f"  {line}\n"
+
+        msg += f"\n━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        msg += f"🟩 کامل: {perfect_count} روز\n"
+        msg += f"🟨 ناقص: {partial_count} روز\n"
+        msg += f"⬜ خالی: {empty_count} روز\n"
+
+        # Percentage
+        active_days = perfect_count + partial_count
+        pct = int(active_days / 30 * 100) if 30 > 0 else 0
+        msg += f"\n📊 فعال بودن: {pct}% ({active_days}/30 روز)\n"
+
+        if perfect_count >= 25:
+            msg += f"\n🏆 فوق‌العاده! ماه درخشان!"
+        elif perfect_count >= 20:
+            msg += f"\n⭐ عالی! خیلی خوب پیش میری!"
+        elif active_days >= 20:
+            msg += f"\n💪 خوبه! سعی کن روزای کامل بیشتر بشه!"
+        else:
+            msg += f"\n🌱 هر روز فرصت جدیدیه. ادامه بده!"
+
+        await update.message.reply_text(msg, reply_markup=main_keyboard())
+    except Exception as e:
+        logger.error(f"show_monthly_calendar error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 📈 XP Prediction (پیش‌بینی)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _predict_level_up(user_id: int, db: Database, gm: Gamification) -> str:
+    """Predict when user will reach next level."""
+    user = db.get_user(user_id)
+    if not user:
+        return ""
+
+    current_xp = user["xp"]
+    level_info = gm.get_level_info(current_xp)
+
+    if not level_info.get("next_level"):
+        return "🏆 تو بالاترین سطحی! افسانه‌ای!"
+
+    xp_to_next = level_info["xp_to_next"]
+
+    # Calculate average daily XP (from last 7 days)
+    stats = db.get_weekly_stats(user_id)
+    xp_week = stats.get("xp_earned", 0)
+    avg_daily = xp_week / 7 if xp_week > 0 else 50  # Default estimate
+
+    if avg_daily > 0:
+        days_to_next = int(xp_to_next / avg_daily)
+        if days_to_next <= 0:
+            return f"پیش‌بینی: امروز لول‌آپ میکنی! ⬆️"
+        elif days_to_next <= 7:
+            return f"پیش‌بینی: تا {days_to_next} روز دیگه لول {level_info['next_level']['level']} میشی! 🚀"
+        else:
+            return f"پیش‌بینی: ~{days_to_next} روز تا لول {level_info['next_level']['level']} ({level_info['next_level']['icon']})"
+    return ""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 📊 10-Day Auto Analysis (تحلیل خودکار ۱۰ روزه)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def generate_auto_analysis(user_id: int, db: Database) -> str:
+    """Generate smart 10-day analysis with coaching tips."""
+    today = datetime.now().date()
+    start = (today - timedelta(days=9)).isoformat()
+    end = today.isoformat()
+
+    # Gather data
+    total_habits = 0
+    per_habit = {"namaz": 0, "sleep": 0, "exercise": 0}
+    levels_count = {"small": 0, "special": 0, "emergency": 0}
+    course_days = 0
+    journal_days = 0
+
+    for i in range(10):
+        d = (today - timedelta(days=i)).isoformat()
+        habits = db.get_today_habits(user_id, d)
+        for key in HABIT_ORDER:
+            if habits[key]:
+                total_habits += 1
+                per_habit[key] += 1
+                levels_count[habits[key]["level"]] += 1
+
+        if db.get_course_today(user_id, d):
+            course_days += 1
+        if db.get_journal(user_id, d):
+            journal_days += 1
+
+    total_possible = 30  # 3 habits × 10 days
+    pct = int(total_habits / total_possible * 100)
+
+    # Build analysis message
+    msg = f"📊 تحلیل خودکار ۱۰ روزه\n\n"
+    msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    msg += f"📈 درصد انجام: {pct}%\n"
+    msg += f"✅ عادت‌ها: {total_habits}/{total_possible}\n"
+    msg += f"📚 دوره: {course_days}/10 روز\n"
+    msg += f"📝 تحلیل: {journal_days}/10 شب\n\n"
+
+    # Per-habit breakdown
+    msg += f"📋 عملکرد هر عادت:\n"
+    for key in HABIT_ORDER:
+        habit = HABITS[key]
+        count = per_habit[key]
+        bar = "🟩" * count + "⬜" * (10 - count)
+        msg += f"  {habit['icon']} {bar} {count}/10\n"
+
+    # Level distribution
+    msg += f"\n📊 توزیع سطوح:\n"
+    msg += f"  🟢 کوچک: {levels_count['small']} | "
+    msg += f"🟡 ویژه: {levels_count['special']} | "
+    msg += f"🔴 اضطراری: {levels_count['emergency']}\n"
+
+    # Smart coaching tips
+    msg += f"\n━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    msg += f"🤖 کوچ هوشمند:\n\n"
+
+    tips_added = 0
+
+    # Weak habits
+    for key in HABIT_ORDER:
+        if per_habit[key] <= 4:
+            msg += f"• {COACH_TIPS[f'weak_{key}']}\n"
+            tips_added += 1
+        elif per_habit[key] >= 8:
+            msg += f"• {COACH_TIPS[f'strong_{key}']}\n"
+            tips_added += 1
+
+    # Level distribution tips
+    if levels_count["emergency"] > levels_count["small"] + levels_count["special"]:
+        msg += f"• {COACH_TIPS['all_emergency']}\n"
+        tips_added += 1
+
+    # Journal tip
+    if journal_days < 3:
+        msg += f"• {COACH_TIPS['no_journal']}\n"
+        tips_added += 1
+
+    # Course tip
+    if course_days < 5:
+        msg += f"• {COACH_TIPS['no_course']}\n"
+        tips_added += 1
+
+    # Consistency
+    if pct >= 80:
+        msg += f"• {COACH_TIPS['consistent']}\n"
+        tips_added += 1
+
+    if tips_added == 0:
+        msg += f"• خوب پیش میری! ادامه بده! 💪\n"
+
+    msg += f"\n━━━━━━━━━━━━━━━━━━━━━━━━"
+    return msg
+
+
+async def show_auto_analysis(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show the 10-day auto analysis."""
+    try:
+        user_id = update.effective_user.id
+        db = _get_db(context)
+        db.get_or_create_user(user_id, update.effective_user.username or "", update.effective_user.first_name or "")
+
+        msg = generate_auto_analysis(user_id, db)
+        await update.message.reply_text(msg, reply_markup=main_keyboard())
+    except Exception as e:
+        logger.error(f"show_auto_analysis error: {e}", exc_info=True)
+        await update.message.reply_text(f"❌ خطا: {e}", reply_markup=main_keyboard())

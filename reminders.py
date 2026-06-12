@@ -1,12 +1,12 @@
 """
 ⏰ Smart Reminders Module for Habit Bot v3.0
-یادآوری‌های هوشمند — فقط وقتی انجام نشده
+یادآوری‌های هوشمند — فقط وقتی انجام نشده + لحن متغیر
 """
 
 import random
 import logging
 import aiohttp
-from datetime import datetime
+from datetime import datetime, timedelta
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
@@ -15,10 +15,33 @@ from config import (
     COURSE_REMINDER_MSGS, HABIT_REMINDER_MSGS, JOURNAL_PROMPTS,
     MOTIVATIONAL_MSGS, FALLBACK_QUOTES,
     QURAN_API_URL,
+    TONE_MORNING, TONE_MIDDAY, TONE_EVENING, TONE_NIGHT,
+    NIGHTLY_QUESTIONS, DAILY_CHALLENGES,
+    ANALYSIS_INTERVAL_DAYS,
 )
 from db import Database
 
 logger = logging.getLogger(__name__)
+
+
+def _get_tone_by_hour() -> list:
+    """Get appropriate tone list based on current hour."""
+    hour = datetime.now().hour
+    if hour < 10:
+        return TONE_MORNING
+    elif hour < 15:
+        return TONE_MIDDAY
+    elif hour < 20:
+        return TONE_EVENING
+    else:
+        return TONE_NIGHT
+
+
+def _get_today_challenge() -> dict:
+    """Get today's challenge."""
+    day_of_year = datetime.now().timetuple().tm_yday
+    idx = day_of_year % len(DAILY_CHALLENGES)
+    return DAILY_CHALLENGES[idx]
 
 
 async def get_quran_verse() -> str:
@@ -37,22 +60,21 @@ async def get_quran_verse() -> str:
     except Exception as e:
         logger.warning(f"Quran API failed: {e}")
 
-    # Fallback
     return random.choice(FALLBACK_QUOTES)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Morning Motivation
+# Morning Motivation (صبحگاهی + چالش روز)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
 async def job_morning_motivation(context: ContextTypes.DEFAULT_TYPE):
-    """Send morning motivation with Quran verse."""
+    """Send morning motivation with Quran verse + daily challenge."""
     db = context.bot_data["db"]
     users = db.get_active_users()
-    today = datetime.now().date().isoformat()
 
     verse = await get_quran_verse()
+    challenge = _get_today_challenge()
 
     for user_id in users:
         try:
@@ -60,13 +82,20 @@ async def job_morning_motivation(context: ContextTypes.DEFAULT_TYPE):
             if not user:
                 continue
 
-            msg = f"🌅 صبح بخیر!\n\n{verse}\n\n"
+            gm = context.bot_data["gamification"]
+            level_info = gm.get_level_info(user["xp"])
+
+            msg = f"🌅 صبح بخیر {level_info['icon']}!\n\n"
+            msg += f"{verse}\n\n"
             msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            msg += f"🎯 امروز رو با انرژی شروع کن!\n"
-            msg += f"📚 جلسه {user['course_session']} منتظرته\n"
-            msg += f"💪 ۳ عادت امروز رو انجام بده\n"
+            msg += f"🎯 برنامه امروز:\n"
+            msg += f"  📚 جلسه {user['course_session']} دوره\n"
+            msg += f"  🕌💪🌙 ۳ عادت\n"
+            msg += f"  📝 تحلیل شبانه\n\n"
+            msg += f"🃏 {challenge['text']}\n"
+            msg += f"   🎁 جایزه: +{challenge['xp']} XP!\n"
             msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            msg += f"\n{random.choice(MOTIVATIONAL_MSGS)}"
+            msg += f"\n{random.choice(TONE_MORNING)}"
 
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("📋 شروع امروز!", callback_data="show_today")],
@@ -78,7 +107,7 @@ async def job_morning_motivation(context: ContextTypes.DEFAULT_TYPE):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Course Reminders (Smart - only if not watched)
+# Course Reminders (Smart + variable tone)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
@@ -87,10 +116,10 @@ async def job_course_reminder(context: ContextTypes.DEFAULT_TYPE):
     db = context.bot_data["db"]
     users = db.get_active_users()
     today = datetime.now().date().isoformat()
+    tone = _get_tone_by_hour()
 
     for user_id in users:
         try:
-            # Skip if already watched today
             if db.get_course_today(user_id, today):
                 continue
 
@@ -112,7 +141,8 @@ async def job_course_reminder(context: ContextTypes.DEFAULT_TYPE):
             elif streak["best"] > 0:
                 msg += f"💪 رکوردت {streak['best']} روز بود. رکورد بزن!\n"
 
-            msg += f"━━━━━━━━━━━━━━━━━━━━━━━━"
+            msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            msg += f"\n{random.choice(tone)}"
 
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("✅ دیدم! ثبت کن", callback_data="course_done")],
@@ -124,15 +154,17 @@ async def job_course_reminder(context: ContextTypes.DEFAULT_TYPE):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Habit Reminders (Smart - only incomplete habits)
+# Habit Reminders (Smart + variable tone)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
 async def job_habit_reminder(context: ContextTypes.DEFAULT_TYPE):
-    """Send habit reminder only for incomplete habits."""
+    """Send habit reminder with variable tone based on time of day."""
     db = context.bot_data["db"]
     users = db.get_active_users()
     today = datetime.now().date().isoformat()
+    hour = datetime.now().hour
+    tone = _get_tone_by_hour()
 
     for user_id in users:
         try:
@@ -140,26 +172,37 @@ async def job_habit_reminder(context: ContextTypes.DEFAULT_TYPE):
             incomplete = [key for key in HABIT_ORDER if habits_today[key] is None]
 
             if not incomplete:
-                continue  # All done! No reminder needed
+                continue
 
             done_count = 3 - len(incomplete)
             user = db.get_user(user_id)
             if not user:
                 continue
 
-            # Build message based on progress
-            if done_count == 0:
-                header = "⏰ هنوز شروع نکردی!"
-                emoji = "😅"
-            elif done_count == 1:
-                header = "⏰ یکی انجام شد، دوتا مونده!"
-                emoji = "💪"
+            # Variable header based on time
+            if hour < 10:
+                if done_count == 0:
+                    header = "🌅 صبح بخیر! وقت شروعه!"
+                else:
+                    header = f"🌅 عالی! {done_count} تا انجام شد!"
+            elif hour < 15:
+                if done_count == 0:
+                    header = "⚡ نصف روز گذشت! هنوز وقت هست!"
+                else:
+                    header = f"💪 {done_count} تا شد! ادامه بده!"
+            elif hour < 20:
+                if done_count == 0:
+                    header = "😤 روز داره تموم میشه! شروع کن!"
+                else:
+                    header = f"🔥 {len(incomplete)} تا مونده! تمومش کن!"
             else:
-                header = "⏰ فقط یکی مونده! تمومش کن!"
-                emoji = "🔥"
+                if done_count == 0:
+                    header = "🆘 آخرین فرصت! حتی لقمه اضطراری بزن!"
+                else:
+                    header = f"🚨 فقط {len(incomplete)} تا! نذار استریک بشکنه!"
 
-            msg = f"{header} {emoji}\n\n"
-            msg += f"{random.choice(HABIT_REMINDER_MSGS)}\n\n"
+            msg = f"{header}\n\n"
+            msg += f"{random.choice(tone)}\n\n"
 
             for key in incomplete:
                 habit = HABITS[key]
@@ -169,7 +212,7 @@ async def job_habit_reminder(context: ContextTypes.DEFAULT_TYPE):
 
             msg += f"\n💡 حتی لقمه اضطراری 🔴 هم حسابه!"
 
-            # Quick action buttons for incomplete habits
+            # Quick action buttons
             keyboard = []
             for key in incomplete:
                 habit = HABITS[key]
@@ -188,28 +231,32 @@ async def job_habit_reminder(context: ContextTypes.DEFAULT_TYPE):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Journal Reminder
+# Journal Reminder (with nightly questions)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
 async def job_journal_reminder(context: ContextTypes.DEFAULT_TYPE):
-    """Remind user to write nightly analysis."""
+    """Remind user with a unique nightly question."""
     db = context.bot_data["db"]
     users = db.get_active_users()
     today = datetime.now().date().isoformat()
 
+    # Pick today's unique question
+    day_of_year = datetime.now().timetuple().tm_yday
+    question = NIGHTLY_QUESTIONS[day_of_year % len(NIGHTLY_QUESTIONS)]
+
     for user_id in users:
         try:
-            # Skip if already wrote today
             if db.get_journal(user_id, today):
                 continue
 
-            msg = f"📝 {random.choice(JOURNAL_PROMPTS)}\n\n"
+            msg = f"📝 سوال امشب:\n\n"
+            msg += f"💬 {question}\n\n"
             msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            msg += f"✨ نوشتن تحلیل = +15 XP\n"
-            msg += f"💡 فقط چند خط بنویس. هرچی از دلت میاد.\n"
+            msg += f"✨ نوشتن = +15 XP\n"
+            msg += f"💡 فقط چند خط بنویس. صادقانه.\n"
             msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-            msg += f"برای نوشتن، /journal رو بزن یا همینجا بنویس:"
+            msg += f"جوابت رو بنویس و بفرست یا /journal بزن:"
 
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("📝 الان می‌نویسم", callback_data="start_journal")],
@@ -221,16 +268,20 @@ async def job_journal_reminder(context: ContextTypes.DEFAULT_TYPE):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Daily Summary
+# Daily Summary (خلاصه شبانه + چالش فردا)
 # ══════════════════════════════════════════════════════════════════════════════
 
 
 async def job_daily_summary(context: ContextTypes.DEFAULT_TYPE):
-    """Send nightly summary with full stats."""
+    """Send nightly summary with stats + tomorrow's challenge preview."""
     db = context.bot_data["db"]
     gamification = context.bot_data["gamification"]
     users = db.get_active_users()
     today = datetime.now().date().isoformat()
+
+    # Tomorrow's challenge
+    tomorrow_day = datetime.now().timetuple().tm_yday + 1
+    tomorrow_challenge = DAILY_CHALLENGES[tomorrow_day % len(DAILY_CHALLENGES)]
 
     for user_id in users:
         try:
@@ -243,7 +294,7 @@ async def job_daily_summary(context: ContextTypes.DEFAULT_TYPE):
             course_today = db.get_course_today(user_id, today)
             journal_today = db.get_journal(user_id, today)
 
-            # Header with progress
+            # Header
             if done_count == 3:
                 progress = "🟩🟩🟩"
                 header = "🏆 روز عالی!"
@@ -260,7 +311,6 @@ async def job_daily_summary(context: ContextTypes.DEFAULT_TYPE):
             msg = f"🌙 خلاصه امشب\n\n"
             msg += f"{progress}  عادت‌ها: {done_count}/3 — {header}\n\n"
 
-            # Habit details
             for key in HABIT_ORDER:
                 habit = HABITS[key]
                 log = habits_today[key]
@@ -273,32 +323,61 @@ async def job_daily_summary(context: ContextTypes.DEFAULT_TYPE):
             msg += f"\n📚 دوره: {'✅' if course_today else '❌'}\n"
             msg += f"📝 تحلیل: {'✅' if journal_today else '❌'}\n"
 
-            # XP summary
-            level_info = gamification.get_level_info(user["xp"])
+            # XP bar
             msg += f"\n{gamification.format_xp_bar(user['xp'])}\n"
-            msg += f"📊 XP کل: {user['xp']}\n"
 
             # Streaks
             streaks = db.get_all_streaks(user_id)
             active_streaks = [(k, v) for k, v in streaks.items() if v["current"] > 0 and k in HABIT_ORDER]
             if active_streaks:
-                msg += f"\n🔥 استریک: "
-                parts = []
-                for key, s in active_streaks:
-                    parts.append(f"{HABITS[key]['icon']}{s['current']}")
+                msg += f"🔥 "
+                parts = [f"{HABITS[k]['icon']}{s['current']}" for k, s in active_streaks]
                 msg += " | ".join(parts)
                 msg += "\n"
 
-            # Motivational closing
+            # Tomorrow's challenge preview
+            msg += f"\n━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            msg += f"🃏 چالش فردا:\n{tomorrow_challenge['text']}\n"
+            msg += f"🎁 +{tomorrow_challenge['xp']} XP\n"
+            msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+
+            # Closing
             if done_count == 3 and course_today:
-                msg += f"\n🌟 روز فوق‌العاده‌ای بود! فردا هم همینطور! 💎"
+                msg += f"\n🌟 روز فوق‌العاده بود! 💎"
             elif done_count >= 2:
                 msg += f"\n{random.choice(MOTIVATIONAL_MSGS)}"
             else:
-                msg += f"\n💡 فردا از صبح شروع کن. یادت باشه: لقمه اضطراری هم قبوله!"
+                msg += f"\n💡 فردا از صبح شروع کن!"
 
             msg += f"\n\nشب بخیر 🌙"
 
             await context.bot.send_message(chat_id=user_id, text=msg)
         except Exception as e:
             logger.error(f"Daily summary error for {user_id}: {e}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 10-Day Auto Analysis Job (هر ۱۰ روز)
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+async def job_10day_analysis(context: ContextTypes.DEFAULT_TYPE):
+    """Send automatic 10-day analysis. Runs daily but only triggers every 10 days."""
+    db = context.bot_data["db"]
+    users = db.get_active_users()
+
+    # Only run on days divisible by 10
+    day_of_year = datetime.now().timetuple().tm_yday
+    if day_of_year % ANALYSIS_INTERVAL_DAYS != 0:
+        return
+
+    # Import here to avoid circular
+    from handlers import generate_auto_analysis
+
+    for user_id in users:
+        try:
+            msg = generate_auto_analysis(user_id, db)
+            msg += f"\n\n💡 این تحلیل هر ۱۰ روز خودکار ارسال میشه."
+            await context.bot.send_message(chat_id=user_id, text=msg)
+        except Exception as e:
+            logger.error(f"10-day analysis error for {user_id}: {e}")

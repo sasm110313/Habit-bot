@@ -34,6 +34,7 @@ from config import (
     HABIT_REMINDER_TIMES,
     JOURNAL_REMINDER_TIME,
     SUMMARY_TIME,
+    ANALYSIS_INTERVAL_DAYS,
 )
 from db import Database
 from gamification import Gamification
@@ -51,6 +52,10 @@ from handlers import (
     show_achievements,
     show_streaks,
     show_journal,
+    show_daily_challenge,
+    show_journey_map,
+    show_monthly_calendar,
+    show_auto_analysis,
     callback_handler,
     handle_text,
 )
@@ -60,6 +65,7 @@ from reminders import (
     job_habit_reminder,
     job_journal_reminder,
     job_daily_summary,
+    job_10day_analysis,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -117,6 +123,10 @@ def main():
     app.add_handler(CommandHandler("setsession", cmd_setsession))
     app.add_handler(CommandHandler("pause", cmd_pause))
     app.add_handler(CommandHandler("resume", cmd_resume))
+    app.add_handler(CommandHandler("analysis", show_auto_analysis))
+    app.add_handler(CommandHandler("challenge", show_daily_challenge))
+    app.add_handler(CommandHandler("journey", show_journey_map))
+    app.add_handler(CommandHandler("calendar", show_monthly_calendar))
 
     # ── Callback Query Handler ───────────────────────────────────────────
     app.add_handler(CallbackQueryHandler(callback_handler))
@@ -173,6 +183,10 @@ def main():
     h, m = SUMMARY_TIME
     job_queue.run_daily(job_daily_summary, time=time(hour=h, minute=m), name="summary")
     print(f"  🌙 Daily summary: {h:02d}:{m:02d}")
+
+    # 10-day auto analysis (runs daily at 12:00, triggers every 10 days)
+    job_queue.run_daily(job_10day_analysis, time=time(hour=12, minute=0), name="analysis_10day")
+    print(f"  📊 Auto analysis: every {ANALYSIS_INTERVAL_DAYS} days")
 
     # ── Start ────────────────────────────────────────────────────────────
     print("")
