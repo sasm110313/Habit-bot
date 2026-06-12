@@ -69,12 +69,17 @@ async def get_quran_verse() -> str:
 
 
 async def job_morning_motivation(context: ContextTypes.DEFAULT_TYPE):
-    """Send morning motivation with Quran verse + daily challenge."""
+    """Send morning motivation with Quran verse + hadith + daily challenge."""
     db = context.bot_data["db"]
     users = db.get_active_users()
 
     verse = await get_quran_verse()
     challenge = _get_today_challenge()
+
+    # Get today's hadith
+    from config import DAILY_HADITHS
+    day_of_year = datetime.now().timetuple().tm_yday
+    hadith = DAILY_HADITHS[day_of_year % len(DAILY_HADITHS)]
 
     for user_id in users:
         try:
@@ -87,6 +92,7 @@ async def job_morning_motivation(context: ContextTypes.DEFAULT_TYPE):
 
             msg = f"🌅 صبح بخیر {level_info['icon']}!\n\n"
             msg += f"{verse}\n\n"
+            msg += f"{hadith}\n\n"
             msg += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
             msg += f"🎯 برنامه امروز:\n"
             msg += f"  📚 جلسه {user['course_session']} دوره\n"

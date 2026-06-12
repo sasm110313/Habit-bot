@@ -283,16 +283,53 @@ FALLBACK_QUOTES = [
 XP_CHALLENGE_BONUS = 30  # XP بونوس برای انجام چالش
 
 DAILY_CHALLENGES = [
-    {"id": "all_small", "text": "🎯 چالش: امروز هر ۳ عادت رو «لقمه کوچک» بزن!", "condition": "all_small", "xp": 60},
-    {"id": "early_habit", "text": "🐦 چالش: قبل ساعت ۸ صبح اولین عادت رو ثبت کن!", "condition": "early_habit", "xp": 40},
-    {"id": "course_first", "text": "📚 چالش: امروز اول دوره رو ببین بعد عادت‌ها!", "condition": "course_first", "xp": 35},
-    {"id": "perfect_plus_journal", "text": "✍️ چالش: روز کامل + تحلیل شبانه!", "condition": "perfect_journal", "xp": 50},
-    {"id": "namaz_small", "text": "🕌 چالش: نماز رو با تمرکز کامل (لقمه کوچک) بخون!", "condition": "namaz_small", "xp": 35},
-    {"id": "exercise_small", "text": "💪 چالش: ورزش کامل ۱۵ دقیقه‌ای بزن!", "condition": "exercise_small", "xp": 35},
-    {"id": "sleep_small", "text": "🌙 چالش: خواب منظم لقمه کوچک!", "condition": "sleep_small", "xp": 35},
-    {"id": "streak_keeper", "text": "🔥 چالش: استریکت رو حفظ کن! حتی با لقمه اضطراری!", "condition": "any_done", "xp": 25},
-    {"id": "fast_complete", "text": "⚡ چالش: هر ۳ عادت رو قبل ساعت ۱۵ انجام بده!", "condition": "fast_complete", "xp": 50},
-    {"id": "full_day", "text": "🏆 چالش: عادت + دوره + تحلیل = روز طلایی!", "condition": "full_day", "xp": 75},
+    # ── چالش‌های لقمه کوچک (سخت‌تر = XP بیشتر) ──
+    {"id": "all_small", "text": "🎯 چالش طلایی: هر ۳ عادت رو «لقمه کوچک» بزن!", "condition": "all_small", "xp": 80},
+    {"id": "namaz_small", "text": "🕌 چالش نماز: نماز رو با تمرکز کامل (لقمه کوچک) بخون!", "condition": "namaz_small", "xp": 35},
+    {"id": "exercise_small", "text": "💪 چالش ورزش: ورزش کامل ۱۵ دقیقه‌ای بزن!", "condition": "exercise_small", "xp": 35},
+    {"id": "sleep_small", "text": "🌙 چالش خواب: خواب منظم لقمه کوچک!", "condition": "sleep_small", "xp": 35},
+
+    # ── چالش‌های زمانی ──
+    {"id": "early_habit", "text": "🐦 سحرخیز: قبل ساعت ۸ صبح اولین عادت رو ثبت کن!", "condition": "early_habit", "xp": 40},
+    {"id": "fast_complete", "text": "⚡ سرعتی: هر ۳ عادت رو قبل ساعت ۱۵ انجام بده!", "condition": "fast_complete", "xp": 55},
+    {"id": "night_warrior", "text": "🦉 جنگجوی شب: حتی اگه دیر شده، لقمه اضطراری بزن!", "condition": "any_done", "xp": 25},
+
+    # ── چالش‌های ترکیبی ──
+    {"id": "course_first", "text": "📚 اول درس: امروز اول دوره رو ببین بعد عادت‌ها!", "condition": "course_first", "xp": 40},
+    {"id": "perfect_plus_journal", "text": "✍️ روز طلایی: روز کامل + تحلیل شبانه!", "condition": "perfect_journal", "xp": 60},
+    {"id": "full_day", "text": "🏆 روز افسانه‌ای: عادت + دوره + تحلیل = کامل!", "condition": "full_day", "xp": 90},
+    {"id": "perfect_plus_course", "text": "📚💪 دانش+عمل: هر ۳ عادت + دوره!", "condition": "perfect_course", "xp": 65},
+
+    # ── چالش‌های استریک ──
+    {"id": "streak_keeper", "text": "🔥 نگهبان آتش: استریکت رو حفظ کن! حتی با اضطراری!", "condition": "any_done", "xp": 25},
+    {"id": "streak_builder", "text": "🧱 سازنده: امروز همه عادت‌ها رو بزن تا استریک بسازی!", "condition": "all_done", "xp": 45},
+    {"id": "double_streak", "text": "🔥🔥 دو آتشه: حداقل ۲ عادت با استریک فعال!", "condition": "two_streaks", "xp": 40},
+
+    # ── چالش‌های انگیزشی/معنوی ──
+    {"id": "mindful_namaz", "text": "🕌✨ نماز آگاهانه: قبل نماز ۱ دقیقه چشم ببند و نیت کن!", "condition": "namaz_small", "xp": 40},
+    {"id": "morning_routine", "text": "🌅 روتین صبح: ورزش + نماز قبل ساعت ۹!", "condition": "morning_routine", "xp": 50},
+    {"id": "gratitude", "text": "🙏 شکرگزاری: تحلیل امشب ۳ چیز بنویس که شکرگزاری!", "condition": "has_journal", "xp": 30},
+
+    # ── چالش‌های سطح‌بندی ──
+    {"id": "no_emergency", "text": "🚫🔴 بدون اضطراری: امروز هیچ لقمه اضطراری نزن!", "condition": "no_emergency", "xp": 55},
+    {"id": "upgrade_one", "text": "⬆️ ارتقا: یه عادت رو از ویژه به کوچک ارتقا بده!", "condition": "has_small", "xp": 30},
+    {"id": "all_special_plus", "text": "🟡+ حداقل ویژه: هر ۳ عادت حداقل لقمه ویژه!", "condition": "all_special_plus", "xp": 50},
+
+    # ── چالش‌های خلاقانه ──
+    {"id": "teach_someone", "text": "🗣️ معلم: امروز یه نکته از دوره رو به کسی بگو!", "condition": "course_first", "xp": 35},
+    {"id": "new_record", "text": "🏅 رکوردشکن: امروز بهترین استریکت رو بشکن!", "condition": "any_done", "xp": 50},
+    {"id": "consistency", "text": "📊 ثبات: مثل دیروز عمل کن! همون سطح رو بزن!", "condition": "any_done", "xp": 30},
+    {"id": "challenge_accepted", "text": "🎯 قبول چالش: فقط امروز، همه چیز رو لقمه کوچک!", "condition": "all_small", "xp": 80},
+
+    # ── چالش‌های هفتگی (آخر هفته) ──
+    {"id": "weekend_warrior", "text": "⚔️ جنگجوی آخر هفته: آخر هفته هم بدون وقفه!", "condition": "all_done", "xp": 45},
+    {"id": "fresh_start", "text": "🌱 شروع تازه: اول هفته با انرژی! روز کامل!", "condition": "all_done", "xp": 40},
+    {"id": "midweek_push", "text": "💪 نیمه هفته: وسط هفته خسته نشو! ادامه بده!", "condition": "all_done", "xp": 40},
+
+    # ── چالش‌های XP و لول ──
+    {"id": "xp_hunter", "text": "💰 شکارچی XP: امروز حداقل ۱۰۰ XP جمع کن!", "condition": "full_day", "xp": 50},
+    {"id": "level_chase", "text": "⬆️ تعقیب لول: هر کاری بکن امروز XP بگیری!", "condition": "any_done", "xp": 25},
+    {"id": "perfectionist", "text": "💎 کمال‌گرا: همه‌چیز کامل! عادت+دوره+تحلیل+لقمه‌کوچک!", "condition": "perfectionist", "xp": 100},
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

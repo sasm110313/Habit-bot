@@ -112,6 +112,16 @@ class Database:
                     UNIQUE(user_id, achievement_key)
                 );
 
+                -- خریدهای فروشگاه
+                CREATE TABLE IF NOT EXISTS purchases (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    item_id TEXT NOT NULL,
+                    purchased_at TEXT DEFAULT (datetime('now','localtime')),
+                    used INTEGER DEFAULT 0,
+                    used_at TEXT DEFAULT NULL
+                );
+
                 -- ژورنال/تحلیل شبانه
                 CREATE TABLE IF NOT EXISTS journals (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -403,7 +413,7 @@ class Database:
     # ══════════════════════════════════════════════════════════════════════════
 
     def update_streak(self, user_id: int, streak_type: str, date: str) -> dict:
-        """Recalculate streak. Returns {"current": int, "best": int, "new_best": bool}"""
+        """Recalculate streak. Uses streak_save if available. Returns {"current": int, "best": int, "new_best": bool}"""
         conn = self._conn()
         try:
             # Get dates based on streak type
@@ -418,7 +428,6 @@ class Database:
                     (user_id,),
                 ).fetchall()
             elif streak_type == "perfect_day":
-                # Days with all 3 habits done
                 rows = conn.execute(
                     """SELECT date FROM habit_logs WHERE user_id = ?
                        GROUP BY date HAVING COUNT(DISTINCT habit_key) >= 3
@@ -438,11 +447,18 @@ class Database:
                 conn.commit()
                 return {"current": 0, "best": 0, "new_best": False}
 
-            # Calculate streak
+            # Calculate streak (with streak_save support: allows 1 gap)
             streak = 0
+            gaps_allowed = 0
             today = datetime.strptime(date, "%Y-%m-%d").date()
             expected = today
 
+            # Check if user has streak_save
+            has_save = self.has_unused_item(user_id, "boost_streak_save")
+            if has_save:
+                gaps_allowed = 1
+
+            gaps_used = 0
             for row in rows:
                 log_date = datetime.strptime(row["date"], "%Y-%m-%d").date()
                 if log_date == expected:
@@ -452,8 +468,18 @@ class Database:
                     expected = log_date
                     streak += 1
                     expected -= timedelta(days=1)
+                elif log_date == expected - timedelta(days=1) and gaps_used < gaps_allowed:
+                    # Gap of 1 day - use streak save
+                    gaps_used += 1
+                    expected = log_date
+                    streak += 1
+                    expected -= timedelta(days=1)
                 else:
                     break
+
+            # If streak save was used, mark it
+            if gaps_used > 0:
+                self.use_item(user_id, "boost_streak_save")
 
             # Get current best
             old = conn.execute(
@@ -735,5 +761,64 @@ class Database:
                 (user_id, user_id),
             ).fetchone()
             return row["last_date"] if row and row["last_date"] else None
+        finally:
+            conn.close()
+
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # Purchase Operations (خریدها)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    def add_purchase(self, user_id: int, item_id: str):
+        conn = self._conn()
+        try:
+            conn.execute(
+                "INSERT INTO purchases (user_id, item_id) VALUES (?, ?)",
+                (user_id, item_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def has_unused_item(self, user_id: int, item_id: str) -> bool:
+        """Check if user has an unused purchase of this item."""
+        conn = self._conn()
+        try:
+            row = conn.execute(
+                "SELECT 1 FROM purchases WHERE user_id = ? AND item_id = ? AND used = 0 LIMIT 1",
+                (user_id, item_id),
+            ).fetchone()
+            return row is not None
+        finally:
+            conn.close()
+
+    def use_item(self, user_id: int, item_id: str) -> bool:
+        """Mark one unused item as used. Returns True if successful."""
+        conn = self._conn()
+        try:
+            from datetime import datetime
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            cursor = conn.execute(
+                """UPDATE purchases SET used = 1, used_at = ?
+                   WHERE id = (
+                       SELECT id FROM purchases
+                       WHERE user_id = ? AND item_id = ? AND used = 0
+                       LIMIT 1
+                   )""",
+                (now, user_id, item_id),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            conn.close()
+
+    def get_user_purchases(self, user_id: int) -> list:
+        conn = self._conn()
+        try:
+            rows = conn.execute(
+                "SELECT * FROM purchases WHERE user_id = ? ORDER BY purchased_at DESC",
+                (user_id,),
+            ).fetchall()
+            return [dict(r) for r in rows]
         finally:
             conn.close()

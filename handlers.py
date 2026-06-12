@@ -356,6 +356,11 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 lvl_msg = gm.format_level_up_notification(reward["level_up"])
                 await context.bot.send_message(chat_id=user_id, text=lvl_msg)
 
+            # Dua after habit completion
+            from config import DUAS_AFTER_HABIT
+            if habit_key in DUAS_AFTER_HABIT:
+                await context.bot.send_message(chat_id=user_id, text=DUAS_AFTER_HABIT[habit_key])
+
         # Refresh today view
         msg, keyboard = _build_today_view(user_id, db, gm)
         await query.edit_message_text(msg, reply_markup=keyboard)
@@ -496,7 +501,20 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         db.add_xp(user_id, -item["cost"], f"خرید: {item['name']}")
-        msg = f"🛍️ خرید موفق!\n\n✅ {item['name']}\n💰 -{item['cost']} XP\n\n{random.choice(MOTIVATIONAL_MSGS)}"
+        db.add_purchase(user_id, item["id"])
+
+        msg = f"🛍️ خرید موفق!\n\n✅ {item['name']}\n💰 -{item['cost']} XP\n"
+
+        if item["type"] == "title":
+            msg += f"\n🏷️ عنوان جدید: {item['value']}"
+        elif item["type"] == "boost" and item["value"] == "streak_save":
+            msg += f"\n🛡️ نجات استریک فعال شد! اگه یه روز فراموش کنی، استریک نمیشکنه."
+        elif item["type"] == "boost":
+            msg += f"\n⚡ بوست فعال شد!"
+        elif item["type"] == "theme":
+            msg += f"\n🎨 تم جدید فعال شد!"
+
+        msg += f"\n\n{random.choice(MOTIVATIONAL_MSGS)}"
         keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("📋 برگشت", callback_data="show_today")]])
         await query.edit_message_text(msg, reply_markup=keyboard)
         await query.answer(f"✅ خریدی!")
@@ -1090,7 +1108,7 @@ def _check_challenge_complete(user_id: int, db: Database, challenge: dict, date:
         return all(habits[k] and habits[k]["level"] == "small" for k in HABIT_ORDER)
     elif condition == "early_habit":
         for k in HABIT_ORDER:
-            if habits[k] and habits[k]["completed_at"]:
+            if habits[k] and habits[k].get("completed_at"):
                 hour = int(habits[k]["completed_at"][11:13])
                 if hour < 8:
                     return True
@@ -1102,6 +1120,10 @@ def _check_challenge_complete(user_id: int, db: Database, challenge: dict, date:
         done = sum(1 for v in habits.values() if v is not None)
         journal = db.get_journal(user_id, date)
         return done >= 3 and journal is not None
+    elif condition == "perfect_course":
+        done = sum(1 for v in habits.values() if v is not None)
+        course = db.get_course_today(user_id, date)
+        return done >= 3 and course is not None
     elif condition == "namaz_small":
         return habits["namaz"] is not None and habits["namaz"]["level"] == "small"
     elif condition == "exercise_small":
@@ -1110,12 +1132,14 @@ def _check_challenge_complete(user_id: int, db: Database, challenge: dict, date:
         return habits["sleep"] is not None and habits["sleep"]["level"] == "small"
     elif condition == "any_done":
         return any(v is not None for v in habits.values())
+    elif condition == "all_done":
+        return all(v is not None for v in habits.values())
     elif condition == "fast_complete":
         done = sum(1 for v in habits.values() if v is not None)
         if done < 3:
             return False
         for k in HABIT_ORDER:
-            if habits[k] and habits[k]["completed_at"]:
+            if habits[k] and habits[k].get("completed_at"):
                 hour = int(habits[k]["completed_at"][11:13])
                 if hour >= 15:
                     return False
@@ -1125,6 +1149,36 @@ def _check_challenge_complete(user_id: int, db: Database, challenge: dict, date:
         course = db.get_course_today(user_id, date)
         journal = db.get_journal(user_id, date)
         return done >= 3 and course is not None and journal is not None
+    elif condition == "two_streaks":
+        streaks = db.get_all_streaks(user_id)
+        active_count = sum(1 for k in HABIT_ORDER if streaks.get(k, {}).get("current", 0) > 0)
+        return active_count >= 2
+    elif condition == "morning_routine":
+        # Namaz + exercise before 9
+        namaz_ok = habits["namaz"] is not None and habits["namaz"].get("completed_at")
+        exercise_ok = habits["exercise"] is not None and habits["exercise"].get("completed_at")
+        if namaz_ok and exercise_ok:
+            h1 = int(habits["namaz"]["completed_at"][11:13])
+            h2 = int(habits["exercise"]["completed_at"][11:13])
+            return h1 < 9 and h2 < 9
+        return False
+    elif condition == "has_journal":
+        journal = db.get_journal(user_id, date)
+        return journal is not None
+    elif condition == "no_emergency":
+        done = sum(1 for v in habits.values() if v is not None)
+        if done == 0:
+            return False
+        return all(habits[k]["level"] != "emergency" for k in HABIT_ORDER if habits[k] is not None)
+    elif condition == "has_small":
+        return any(habits[k] and habits[k]["level"] == "small" for k in HABIT_ORDER)
+    elif condition == "all_special_plus":
+        return all(habits[k] and habits[k]["level"] in ("small", "special") for k in HABIT_ORDER)
+    elif condition == "perfectionist":
+        done = all(habits[k] and habits[k]["level"] == "small" for k in HABIT_ORDER)
+        course = db.get_course_today(user_id, date)
+        journal = db.get_journal(user_id, date)
+        return done and course is not None and journal is not None
     return False
 
 
