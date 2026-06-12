@@ -27,27 +27,30 @@ class Database:
         return conn
 
     def _init_db(self):
+        import os
+
+        # ── Check if old v2 database needs migration ─────────────────────
+        if os.path.exists(self.db_path):
+            try:
+                conn = self._conn()
+                conn.execute("SELECT xp FROM users LIMIT 1")
+                conn.close()
+            except (sqlite3.OperationalError, sqlite3.DatabaseError):
+                # Old incompatible database - delete it completely
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                os.remove(self.db_path)
+                logger.info(f"Removed old v2 database: {self.db_path}")
+                for suffix in ["-wal", "-shm"]:
+                    wal_file = self.db_path + suffix
+                    if os.path.exists(wal_file):
+                        os.remove(wal_file)
+
+        # ── Create tables ────────────────────────────────────────────────
         conn = self._conn()
         try:
-            # ── Check if old v2 database needs migration ─────────────────
-            try:
-                conn.execute("SELECT xp FROM users LIMIT 1")
-            except sqlite3.OperationalError:
-                # Old database or first run - drop incompatible tables
-                conn.executescript("""
-                    DROP TABLE IF EXISTS users;
-                    DROP TABLE IF EXISTS habits;
-                    DROP TABLE IF EXISTS habit_logs;
-                    DROP TABLE IF EXISTS reminders;
-                    DROP TABLE IF EXISTS course_progress;
-                    DROP TABLE IF EXISTS streaks;
-                    DROP TABLE IF EXISTS course_logs;
-                    DROP TABLE IF EXISTS achievements;
-                    DROP TABLE IF EXISTS journals;
-                    DROP TABLE IF EXISTS xp_logs;
-                """)
-                conn.commit()
-
             conn.executescript("""
                 -- کاربران
                 CREATE TABLE IF NOT EXISTS users (
