@@ -15,6 +15,7 @@ Features:
 """
 
 import sys
+import os
 import logging
 from datetime import time
 
@@ -198,9 +199,37 @@ def main():
     job_queue.run_daily(job_10day_analysis, time=time(hour=12, minute=0), name="analysis_10day")
     print(f"  📊 Auto analysis: every {ANALYSIS_INTERVAL_DAYS} days")
 
-    # ── Start ────────────────────────────────────────────────────────────
+    # ── Start API Server (for Mini App) ────────────────────────────────
+    import asyncio
+    import threading
+    from aiohttp import web
+    from api_server import create_api_app
+
+    api_app = create_api_app(db, gm)
+    API_PORT = int(os.environ.get("API_PORT", "8090"))
+
+    async def start_api():
+        runner = web.AppRunner(api_app)
+        await runner.setup()
+        site = web.TCPSite(runner, '127.0.0.1', API_PORT)
+        await site.start()
+        logger.info(f"🌐 API server running on 127.0.0.1:{API_PORT}")
+
+    # Run API in background
+    loop = asyncio.new_event_loop()
+
+    def run_api_loop():
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(start_api())
+        loop.run_forever()
+
+    api_thread = threading.Thread(target=run_api_loop, daemon=True)
+    api_thread.start()
+    print(f"  🌐 API server: 127.0.0.1:{API_PORT}")
+
+    # ── Start Bot ────────────────────────────────────────────────────────
     print("")
-    print("✅ Bot running! Press Ctrl+C to stop.")
+    print("✅ Bot + API running! Press Ctrl+C to stop.")
     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
     app.run_polling(allowed_updates=["message", "callback_query"], drop_pending_updates=True)

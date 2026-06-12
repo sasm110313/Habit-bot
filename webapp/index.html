@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>عادت‌ساز</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --radius: 14px;
+            --radius-sm: 10px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-lg: 0 4px 20px rgba(0,0,0,0.12);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'SF Pro', sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            direction: rtl;
+            min-height: 100vh;
+            padding-bottom: 80px;
+            overflow-x: hidden;
+        }
+
+        /* ═══════════════════ Header ═══════════════════ */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--tg-theme-bg-color, #ffffff);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
+            backdrop-filter: blur(10px);
+        }
+
+        .xp-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .level-badge {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 50%;
+        }
+
+        .xp-info {
+            flex: 1;
+        }
+
+        .xp-info .level-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000);
+        }
+
+        .xp-info .xp-text {
+            font-size: 11px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+
+        .xp-bar {
+            height: 6px;
+            background: var(--tg-theme-secondary-bg-color, #e0e0e0);
+            border-radius: 3px;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        .xp-bar-fill {
+            height: 100%;
+            background: var(--tg-theme-button-color, #3390ec);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .xp-total {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--tg-theme-button-color, #3390ec);
+            white-space: nowrap;
+        }
+
+        /* ═══════════════════ Pages ═══════════════════ */
+        .page {
+            display: none;
+            padding: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ═══════════════════ Cards ═══════════════════ */
+        .card {
+            background: var(--tg-theme-secondary-bg-color, #f8f8f8);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .card:active {
+            transform: scale(0.98);
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ═══════════════════ Habit Cards ═══════════════════ */
+        .habit-card {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .habit-card.completed {
+            border: 2px solid var(--tg-theme-button-color, #3390ec);
+        }
+
+        .habit-card.completed::after {
+            content: '✓';
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 24px;
+            height: 24px;
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #fff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .habit-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .habit-icon {
+            font-size: 28px;
+        }
+
+        .habit-name {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .habit-streak {
+            margin-right: auto;
+            font-size: 12px;
+            color: #ff6b35;
+            font-weight: 600;
+        }
+
+        .level-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .level-btn {
+            flex: 1;
+            padding: 10px 8px;
+            border: 2px solid var(--tg-theme-secondary-bg-color, #e0e0e0);
+            border-radius: var(--radius-sm);
+            background: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            line-height: 1.3;
+        }
+
+        .level-btn:active {
+            transform: scale(0.95);
+        }
+
+        .level-btn.selected {
+            border-color: var(--tg-theme-button-color, #3390ec);
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #fff);
+        }
+
+        .level-btn .level-icon {
+            font-size: 18px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .level-btn .level-xp {
+            font-size: 10px;
+            opacity: 0.7;
+        }
+
+        /* ═══════════════════ Course Card ═══════════════════ */
+        .course-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .course-card .course-info {
+            flex: 1;
+        }
+
+        .course-card .course-session {
+            font-size: 13px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+
+        .course-btn {
+            padding: 10px 20px;
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #fff);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .course-btn:active {
+            transform: scale(0.95);
+        }
+
+        .course-btn.done {
+            background: #4caf50;
+        }
+
+        /* ═══════════════════ Challenge Card ═══════════════════ */
+        .challenge-card {
+            background: linear-gradient(135deg, var(--tg-theme-button-color, #3390ec), #7c4dff);
+            color: #fff;
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .challenge-card .challenge-text {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .challenge-card .challenge-reward {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .challenge-card .challenge-status {
+            margin-top: 8px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* ═══════════════════ Journal Card ═══════════════════ */
+        .journal-textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 12px;
+            border: 2px solid var(--tg-theme-secondary-bg-color, #e0e0e0);
+            border-radius: var(--radius-sm);
+            background: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
+            font-size: 14px;
+            font-family: inherit;
+            direction: rtl;
+            resize: vertical;
+            transition: var(--transition);
+        }
+
+        .journal-textarea:focus {
+            outline: none;
+            border-color: var(--tg-theme-button-color, #3390ec);
+        }
+
+        .journal-btn {
+            margin-top: 10px;
+            width: 100%;
+            padding: 12px;
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #fff);
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .journal-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* ═══════════════════ Stats Page ═══════════════════ */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .stat-box {
+            background: var(--tg-theme-secondary-bg-color, #f8f8f8);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            text-align: center;
+        }
+
+        .stat-box .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--tg-theme-button-color, #3390ec);
+        }
+
+        .stat-box .stat-label {
+            font-size: 11px;
+            color: var(--tg-theme-hint-color, #999);
+            margin-top: 4px;
+        }
+
+        .weekly-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            height: 120px;
+            padding: 10px 0;
+            gap: 6px;
+        }
+
+        .chart-bar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .chart-bar .bar {
+            width: 100%;
+            max-width: 30px;
+            background: var(--tg-theme-button-color, #3390ec);
+            border-radius: 4px 4px 0 0;
+            min-height: 4px;
+            transition: height 0.5s ease;
+        }
+
+        .chart-bar .day-label {
+            font-size: 10px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+
+        /* ═══════════════════ Calendar ═══════════════════ */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-top: 10px;
+        }
+
+        .cal-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .cal-day.perfect { background: #4caf50; }
+        .cal-day.partial { background: #ff9800; }
+        .cal-day.empty { background: var(--tg-theme-secondary-bg-color, #eee); }
+        .cal-day.today { box-shadow: 0 0 0 2px var(--tg-theme-button-color, #3390ec); }
+
+        /* ═══════════════════ Journey Map ═══════════════════ */
+        .journey-path {
+            position: relative;
+            padding: 10px 0;
+        }
+
+        .journey-node {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: var(--radius-sm);
+            background: var(--tg-theme-secondary-bg-color, #f8f8f8);
+            transition: var(--transition);
+        }
+
+        .journey-node.completed {
+            opacity: 0.7;
+        }
+
+        .journey-node.current {
+            border: 2px solid var(--tg-theme-button-color, #3390ec);
+            background: var(--tg-theme-bg-color, #fff);
+        }
+
+        .journey-node.locked {
+            opacity: 0.4;
+        }
+
+        .journey-node .node-icon {
+            font-size: 28px;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--tg-theme-bg-color, #fff);
+            border-radius: 50%;
+        }
+
+        .journey-node .node-info {
+            flex: 1;
+        }
+
+        .journey-node .node-name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .journey-node .node-desc {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+
+        .journey-node .node-progress {
+            margin-top: 6px;
+            height: 4px;
+            background: var(--tg-theme-secondary-bg-color, #e0e0e0);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .journey-node .node-progress-fill {
+            height: 100%;
+            background: var(--tg-theme-button-color, #3390ec);
+            border-radius: 2px;
+        }
+
+        /* ═══════════════════ Achievements ═══════════════════ */
+        .ach-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .ach-item {
+            text-align: center;
+            padding: 12px 8px;
+            background: var(--tg-theme-secondary-bg-color, #f8f8f8);
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+
+        .ach-item.locked {
+            opacity: 0.35;
+            filter: grayscale(1);
+        }
+
+        .ach-item .ach-icon {
+            font-size: 28px;
+            margin-bottom: 6px;
+        }
+
+        .ach-item .ach-name {
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* ═══════════════════ Bottom Nav ═══════════════════ */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-top: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
+            padding: 8px 0;
+            padding-bottom: calc(8px + env(safe-area-inset-bottom, 0));
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--tg-theme-hint-color, #999);
+            text-decoration: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .nav-item.active {
+            color: var(--tg-theme-button-color, #3390ec);
+        }
+
+        .nav-item .nav-icon {
+            font-size: 22px;
+        }
+
+        .nav-item .nav-label {
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        /* ═══════════════════ Misc ═══════════════════ */
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .streak-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: #ff6b3520;
+            color: #ff6b35;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+
+        .loading::after {
+            content: '';
+            display: block;
+            width: 30px;
+            height: 30px;
+            margin: 12px auto;
+            border: 3px solid var(--tg-theme-secondary-bg-color, #e0e0e0);
+            border-top-color: var(--tg-theme-button-color, #3390ec);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--tg-theme-text-color, #000);
+            color: var(--tg-theme-bg-color, #fff);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .mood-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .mood-btn {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid var(--tg-theme-secondary-bg-color, #e0e0e0);
+            border-radius: var(--radius-sm);
+            background: var(--tg-theme-bg-color, #fff);
+            font-size: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .mood-btn.selected {
+            border-color: var(--tg-theme-button-color, #3390ec);
+            background: var(--tg-theme-button-color, #3390ec)20;
+        }
+
+        .progress-ring {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: var(--tg-theme-hint-color, #999);
+            font-size: 14px;
+        }
+
+        .shop-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--tg-theme-secondary-bg-color, #f8f8f8);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+        }
+
+        .shop-item .item-info {
+            flex: 1;
+        }
+
+        .shop-item .item-name {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .shop-item .item-cost {
+            font-size: 11px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+
+        .shop-item .buy-btn {
+            padding: 8px 14px;
+            background: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #fff);
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .shop-item .buy-btn:disabled {
+            opacity: 0.5;
+        }
+
+        .dhikr-card {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .dhikr-card .dhikr-arabic {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        .dhikr-card .dhikr-meaning {
+            font-size: 13px;
+            color: var(--tg-theme-hint-color, #999);
+            margin-bottom: 6px;
+        }
+
+        .dhikr-card .dhikr-count {
+            font-size: 12px;
+            color: var(--tg-theme-button-color, #3390ec);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="xp-bar-container">
+            <div class="level-badge" id="levelBadge">🌱</div>
+            <div class="xp-info">
+                <div class="level-name" id="levelName">تازه‌کار — لول ۱</div>
+                <div class="xp-bar">
+                    <div class="xp-bar-fill" id="xpBarFill" style="width: 0%"></div>
+                </div>
+                <div class="xp-text" id="xpText">0 / 200 XP</div>
+            </div>
+            <div class="xp-total" id="xpTotal">0 XP</div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ Today Page ═══════════════ -->
+    <div class="page active" id="page-today">
+        <div class="section-title">📋 عادت‌های امروز</div>
+
+        <div class="card habit-card" id="habit-namaz">
+            <div class="habit-header">
+                <span class="habit-icon">🕌</span>
+                <span class="habit-name">تمرکز در نماز</span>
+                <span class="habit-streak" id="streak-namaz"></span>
+            </div>
+            <div class="level-buttons">
+                <button class="level-btn" onclick="logHabit('namaz','small')" data-habit="namaz" data-level="small">
+                    <span class="level-icon">🟢</span>
+                    کوچک
+                    <span class="level-xp">+30</span>
+                </button>
+                <button class="level-btn" onclick="logHabit('namaz','special')" data-habit="namaz" data-level="special">
+                    <span class="level-icon">🟡</span>
+                    ویژه
+                    <span class="level-xp">+20</span>
+                </button>
+                <button class="level-btn" onclick="logHabit('namaz','emergency')" data-habit="namaz" data-level="emergency">
+                    <span class="level-icon">🔴</span>
+                    اضطراری
+                    <span class="level-xp">+10</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="card habit-card" id="habit-sleep">
+            <div class="habit-header">
+                <span class="habit-icon">🌙</span>
+                <span class="habit-name">خواب منظم</span>
+                <span class="habit-streak" id="streak-sleep"></span>
+            </div>
+            <div class="level-buttons">
+                <button class="level-btn" onclick="logHabit('sleep','small')" data-habit="sleep" data-level="small">
+                    <span class="level-icon">🟢</span>
+                    کوچک
+                    <span class="level-xp">+30</span>
+                </button>
+                <button class="level-btn" onclick="logHabit('sleep','special')" data-habit="sleep" data-level="special">
+                    <span class="level-icon">🟡</span>
+                    ویژه
+                    <span class="level-xp">+20</span>
+                </button>
+                <button class="level-btn" onclick="logHabit('sleep','emergency')" data-habit="sleep" data-level="emergency">
+                    <span class="level-icon">🔴</span>
+                    اضطراری
+                    <span class="level-xp">+10</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="card habit-card" id="habit-exercise">
+            <div class="habit-header">
+                <span class="habit-icon">💪</span>
+                <span class="habit-name">ورزش</span>
+                <span class="habit-streak" id="streak-exercise"></span>
+            </div>
+            <div class="level-buttons">
+                <button class="level-btn" onclick="logHabit('exercise','small')" data-habit="exercise" data-level="small">
+                    <span class="level-icon">🟢</span>
+                    کوچک
+                    <span class="level-xp">+30</span>
+                </button>
+                <button class="level-btn" onclick="logHabit('exercise','special')" data-habit="exercise" data-level="special">
+                    <span class="level-icon">🟡</span>
+                    ویژه
+                    <span class="level-xp">+20</span>
+                </button>
+                <button class="level-btn" onclick="logHabit('exercise','emergency')" data-habit="exercise" data-level="emergency">
+                    <span class="level-icon">🔴</span>
+                    اضطراری
+                    <span class="level-xp">+10</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Course -->
+        <div class="card">
+            <div class="course-card">
+                <span style="font-size:28px">📚</span>
+                <div class="course-info">
+                    <div class="card-title" style="margin:0">دوره آموزشی</div>
+                    <div class="course-session" id="courseSession">جلسه ۱۵۷ | چهله ۴</div>
+                </div>
+                <button class="course-btn" id="courseBtn" onclick="logCourse()">✅ دیدم</button>
+            </div>
+        </div>
+
+        <!-- Challenge -->
+        <div class="challenge-card" id="challengeCard">
+            <div class="challenge-text" id="challengeText">🃏 چالش روز در حال بارگذاری...</div>
+            <div class="challenge-reward" id="challengeReward">🎁 +0 XP</div>
+            <div class="challenge-status" id="challengeStatus">⬜ انجام نشده</div>
+        </div>
+
+        <!-- Journal -->
+        <div class="card">
+            <div class="card-title">📝 تحلیل شبانه</div>
+            <div class="mood-selector">
+                <button class="mood-btn" onclick="selectMood(5)">😊</button>
+                <button class="mood-btn" onclick="selectMood(4)">🙂</button>
+                <button class="mood-btn" onclick="selectMood(3)">😐</button>
+                <button class="mood-btn" onclick="selectMood(2)">😓</button>
+                <button class="mood-btn" onclick="selectMood(1)">😢</button>
+            </div>
+            <textarea class="journal-textarea" id="journalText" placeholder="هرچی از دلت میاد بنویس..."></textarea>
+            <button class="journal-btn" onclick="saveJournal()">📝 ثبت تحلیل (+15 XP)</button>
+        </div>
+    </div>
+
+    <!-- ═══════════════ Stats Page ═══════════════ -->
+    <div class="page" id="page-stats">
+        <div class="section-title">📊 آمار هفتگی</div>
+
+        <div class="stat-grid">
+            <div class="stat-box">
+                <div class="stat-value" id="statPercent">0%</div>
+                <div class="stat-label">درصد انجام</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="statPerfect">0</div>
+                <div class="stat-label">روز کامل</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="statCourse">0</div>
+                <div class="stat-label">روز دوره</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="statXP">0</div>
+                <div class="stat-label">XP هفته</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📅 نمودار هفتگی</div>
+            <div class="weekly-chart" id="weeklyChart"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📅 تقویم ماهانه</div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+            <div style="margin-top:8px;font-size:11px;color:var(--tg-theme-hint-color)">
+                🟩 کامل &nbsp; 🟨 ناقص &nbsp; ⬜ خالی
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ Journey Page ═══════════════ -->
+    <div class="page" id="page-journey">
+        <div class="section-title">🗺️ نقشه سفر ۹ چهله</div>
+        <div class="journey-path" id="journeyPath"></div>
+    </div>
+
+    <!-- ═══════════════ Achievements Page ═══════════════ -->
+    <div class="page" id="page-achievements">
+        <div class="section-title">🏆 دستاوردها</div>
+        <div class="ach-grid" id="achGrid"></div>
+    </div>
+
+    <!-- ═══════════════ More Page ═══════════════ -->
+    <div class="page" id="page-more">
+        <div class="section-title">⚙️ بیشتر</div>
+
+        <!-- Dhikr -->
+        <div class="card dhikr-card" id="dhikrCard">
+            <div class="card-title" style="justify-content:center">📿 ذکر امروز</div>
+            <div class="dhikr-arabic" id="dhikrArabic">در حال بارگذاری...</div>
+            <div class="dhikr-meaning" id="dhikrMeaning"></div>
+            <div class="dhikr-count" id="dhikrCount"></div>
+        </div>
+
+        <!-- Hadith -->
+        <div class="card">
+            <div class="card-title">📖 حدیث روز</div>
+            <div id="hadithText" style="font-size:13px;line-height:1.8"></div>
+        </div>
+
+        <!-- Streaks -->
+        <div class="card">
+            <div class="card-title">🔥 استریک‌ها</div>
+            <div id="streaksDetail"></div>
+        </div>
+
+        <!-- Shop -->
+        <div class="card">
+            <div class="card-title">🏪 فروشگاه</div>
+            <div id="shopItems"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ Bottom Navigation ═══════════════ -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchPage('today')">
+            <span class="nav-icon">📋</span>
+            <span class="nav-label">امروز</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('stats')">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">آمار</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('journey')">
+            <span class="nav-icon">🗺️</span>
+            <span class="nav-label">سفر</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('achievements')">
+            <span class="nav-icon">🏆</span>
+            <span class="nav-label">دستاوردها</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('more')">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-label">بیشتر</span>
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════
+        // Telegram WebApp Init
+        // ═══════════════════════════════════════════════════════════════════
+
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        const user = tg.initDataUnsafe?.user;
+        const userId = user?.id || 0;
+        const API_BASE = '/api';
+
+        let appData = {
+            habits: {},
+            course: null,
+            challenge: null,
+            xp: 0,
+            level: 1,
+            streaks: {},
+            achievements: [],
+            stats: {},
+            journey: {},
+            shop: [],
+            dhikr: {},
+            mood: 0,
+        };
+
+        // ═══════════════════════════════════════════════════════════════════
+        // API Helpers
+        // ═══════════════════════════════════════════════════════════════════
+
+        async function api(endpoint, method = 'GET', body = null) {
+            try {
+                const opts = {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                };
+                if (body) opts.body = JSON.stringify({ ...body, user_id: userId });
+
+                const url = method === 'GET' && userId
+                    ? `${API_BASE}${endpoint}?user_id=${userId}`
+                    : `${API_BASE}${endpoint}`;
+
+                const res = await fetch(url, opts);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return await res.json();
+            } catch (e) {
+                console.error('API Error:', e);
+                return null;
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Page Navigation
+        // ═══════════════════════════════════════════════════════════════════
+
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+            document.getElementById(`page-${page}`).classList.add('active');
+            event.currentTarget?.classList.add('active');
+
+            // Load page data
+            if (page === 'stats') loadStats();
+            else if (page === 'journey') loadJourney();
+            else if (page === 'achievements') loadAchievements();
+            else if (page === 'more') loadMore();
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Toast
+        // ═══════════════════════════════════════════════════════════════════
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Today Page
+        // ═══════════════════════════════════════════════════════════════════
+
+        async function loadToday() {
+            const data = await api('/today');
+            if (!data) return;
+
+            appData = { ...appData, ...data };
+
+            // Update XP bar
+            updateXPBar(data.xp, data.level_info);
+
+            // Update habits
+            for (const key of ['namaz', 'sleep', 'exercise']) {
+                const card = document.getElementById(`habit-${key}`);
+                const habit = data.habits[key];
+
+                if (habit) {
+                    card.classList.add('completed');
+                    // Highlight selected level
+                    card.querySelectorAll('.level-btn').forEach(btn => {
+                        btn.classList.toggle('selected', btn.dataset.level === habit.level);
+                    });
+                } else {
+                    card.classList.remove('completed');
+                    card.querySelectorAll('.level-btn').forEach(btn => btn.classList.remove('selected'));
+                }
+
+                // Streak
+                const streak = data.streaks[key]?.current || 0;
+                const streakEl = document.getElementById(`streak-${key}`);
+                streakEl.textContent = streak > 0 ? `🔥${streak}` : '';
+            }
+
+            // Course
+            if (data.course) {
+                document.getElementById('courseBtn').classList.add('done');
+                document.getElementById('courseBtn').textContent = '✅ دیدم!';
+            } else {
+                document.getElementById('courseBtn').classList.remove('done');
+                document.getElementById('courseBtn').textContent = '✅ ثبت';
+            }
+            document.getElementById('courseSession').textContent =
+                `جلسه ${data.course_session} | چهله ${data.course_chelle}`;
+
+            // Challenge
+            if (data.challenge) {
+                document.getElementById('challengeText').textContent = data.challenge.text;
+                document.getElementById('challengeReward').textContent = `🎁 +${data.challenge.xp} XP`;
+                document.getElementById('challengeStatus').textContent =
+                    data.challenge_done ? '✅ انجام شد!' : '⬜ انجام نشده';
+            }
+        }
+
+        function updateXPBar(xp, levelInfo) {
+            if (!levelInfo) return;
+            document.getElementById('levelBadge').textContent = levelInfo.icon;
+            document.getElementById('levelName').textContent = `${levelInfo.name} — لول ${levelInfo.level}`;
+            document.getElementById('xpBarFill').style.width = `${levelInfo.progress}%`;
+            document.getElementById('xpTotal').textContent = `${xp} XP`;
+
+            if (levelInfo.next_level) {
+                document.getElementById('xpText').textContent =
+                    `${xp} / ${levelInfo.next_level.xp_needed} XP`;
+            } else {
+                document.getElementById('xpText').textContent = 'حداکثر سطح! 🏆';
+            }
+        }
+
+        async function logHabit(habitKey, level) {
+            tg.HapticFeedback.impactOccurred('medium');
+            const data = await api('/habit', 'POST', { habit_key: habitKey, level });
+            if (data) {
+                showToast(`✅ +${data.xp_earned} XP`);
+                loadToday();
+            }
+        }
+
+        async function logCourse() {
+            tg.HapticFeedback.impactOccurred('medium');
+            const data = await api('/course', 'POST');
+            if (data) {
+                showToast(data.logged ? '✅ دوره ثبت شد!' : '↩️ لغو شد');
+                loadToday();
+            }
+        }
+
+        function selectMood(score) {
+            appData.mood = score;
+            document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+        }
+
+        async function saveJournal() {
+            const content = document.getElementById('journalText').value.trim();
+            if (!content) {
+                showToast('❌ یه چیزی بنویس!');
+                return;
+            }
+
+            tg.HapticFeedback.impactOccurred('medium');
+            const data = await api('/journal', 'POST', { content, mood: appData.mood });
+            if (data) {
+                showToast(`✅ ثبت شد! +${data.xp_earned} XP`);
+                document.getElementById('journalText').value = '';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Stats Page
+        // ═══════════════════════════════════════════════════════════════════
+
+        async function loadStats() {
+            const data = await api('/stats');
+            if (!data) return;
+
+            document.getElementById('statPercent').textContent = `${data.percentage}%`;
+            document.getElementById('statPerfect').textContent = data.perfect_days;
+            document.getElementById('statCourse').textContent = data.course_days;
+            document.getElementById('statXP').textContent = data.xp_earned;
+
+            // Weekly chart
+            const chart = document.getElementById('weeklyChart');
+            chart.innerHTML = '';
+            const days = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+            const maxVal = 3;
+
+            if (data.daily) {
+                data.daily.forEach((d, i) => {
+                    const pct = (d.done / maxVal) * 100;
+                    chart.innerHTML += `
+                        <div class="chart-bar">
+                            <div class="bar" style="height:${Math.max(pct, 5)}%"></div>
+                            <div class="day-label">${days[i % 7]}</div>
+                        </div>`;
+                });
+            }
+
+            // Calendar
+            const cal = document.getElementById('calendarGrid');
+            cal.innerHTML = '';
+            if (data.calendar) {
+                data.calendar.forEach(day => {
+                    const cls = day.done === 3 ? 'perfect' :
+                                day.done > 0 ? 'partial' : 'empty';
+                    const today = day.is_today ? ' today' : '';
+                    cal.innerHTML += `<div class="cal-day ${cls}${today}">${day.done === 3 ? '🟩' : day.done > 0 ? '🟨' : '⬜'}</div>`;
+                });
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Journey Page
+        // ═══════════════════════════════════════════════════════════════════
+
+        async function loadJourney() {
+            const data = await api('/journey');
+            if (!data) return;
+
+            const path = document.getElementById('journeyPath');
+            path.innerHTML = '';
+
+            const milestones = [
+                { chelle: 1, name: 'آغاز سفر', icon: '🌱' },
+                { chelle: 2, name: 'مسیر ادامه', icon: '🌿' },
+                { chelle: 3, name: 'استقامت', icon: '🌳' },
+                { chelle: 4, name: 'بلوغ', icon: '🌸' },
+                { chelle: 5, name: 'تسلط', icon: '⭐' },
+                { chelle: 6, name: 'قدرت', icon: '💎' },
+                { chelle: 7, name: 'حکمت', icon: '🦅' },
+                { chelle: 8, name: 'استادی', icon: '👑' },
+                { chelle: 9, name: 'عادت‌ساز', icon: '🏆' },
+            ];
+
+            milestones.forEach(m => {
+                let cls = '';
+                let progress = '';
+
+                if (m.chelle < data.current_chelle) {
+                    cls = 'completed';
+                } else if (m.chelle === data.current_chelle) {
+                    cls = 'current';
+                    const pct = data.progress_in_chelle || 0;
+                    progress = `<div class="node-progress"><div class="node-progress-fill" style="width:${pct}%"></div></div>`;
+                } else {
+                    cls = 'locked';
+                }
+
+                path.innerHTML += `
+                    <div class="journey-node ${cls}">
+                        <div class="node-icon">${m.icon}</div>
+                        <div class="node-info">
+                            <div class="node-name">چهله ${m.chelle}: ${m.name}</div>
+                            <div class="node-desc">${cls === 'completed' ? '✅ تکمیل شده' : cls === 'current' ? '▶️ در حال انجام' : '🔒 قفل'}</div>
+                            ${progress}
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Achievements Page
+        // ═══════════════════════════════════════════════════════════════════
+
+        async function loadAchievements() {
+            const data = await api('/achievements');
+            if (!data) return;
+
+            const grid = document.getElementById('achGrid');
+            grid.innerHTML = '';
+
+            const allAchs = [
+                { key: 'first_habit', icon: '🚀', name: 'شروع' },
+                { key: 'streak_3', icon: '🔥', name: '۳ روزه' },
+                { key: 'streak_7', icon: '🔥🔥', name: 'هفته‌ای' },
+                { key: 'streak_14', icon: '💫', name: '۲ هفته' },
+                { key: 'streak_21', icon: '⚡', name: '۳ هفته' },
+                { key: 'streak_30', icon: '🌙', name: 'ماهانه' },
+                { key: 'streak_40', icon: '🏅', name: 'چهله' },
+                { key: 'streak_66', icon: '🧠', name: 'عادت‌ساز' },
+                { key: 'perfect_1', icon: '⭐', name: 'روز کامل' },
+                { key: 'perfect_7', icon: '🌟', name: 'هفته طلایی' },
+                { key: 'perfect_30', icon: '☀️', name: 'ماه درخشان' },
+                { key: 'course_7', icon: '📖', name: 'دانش‌آموز' },
+                { key: 'course_30', icon: '📚', name: 'دانشجو' },
+                { key: 'course_chelle', icon: '🎓', name: 'فارغ‌التحصیل' },
+                { key: 'first_journal', icon: '📝', name: 'تحلیل‌گر' },
+                { key: 'comeback', icon: '💪', name: 'برگشت' },
+                { key: 'early_bird', icon: '🐦', name: 'سحرخیز' },
+                { key: 'night_owl', icon: '🦉', name: 'جغد شب' },
+                { key: 'emergency_hero', icon: '🦸', name: 'قهرمان' },
+            ];
+
+            const unlocked = new Set(data.unlocked || []);
+
+            allAchs.forEach(ach => {
+                const cls = unlocked.has(ach.key) ? '' : 'locked';
+                grid.innerHTML += `
+                    <div class="ach-item ${cls}">
+                        <div class="ach-icon">${ach.icon}</div>
+                        <div class="ach-name">${ach.name}</div>
+                    </div>`;
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // More Page
+        // ═══════════════════════════════════════════════════════════════════
+
+        async function loadMore() {
+            // Dhikr
+            const dhikr = await api('/dhikr');
+            if (dhikr) {
+                document.getElementById('dhikrArabic').textContent = dhikr.text;
+                document.getElementById('dhikrMeaning').textContent = dhikr.meaning;
+                document.getElementById('dhikrCount').textContent = `🔢 ${dhikr.count}`;
+                document.getElementById('hadithText').textContent = dhikr.hadith;
+            }
+
+            // Streaks
+            const stats = await api('/stats');
+            if (stats && stats.streaks) {
+                const el = document.getElementById('streaksDetail');
+                el.innerHTML = '';
+                const habits = { namaz: '🕌 نماز', sleep: '🌙 خواب', exercise: '💪 ورزش' };
+                for (const [key, name] of Object.entries(habits)) {
+                    const s = stats.streaks[key] || { current: 0, best: 0 };
+                    el.innerHTML += `<div style="margin-bottom:8px">${name}: <span class="streak-badge">🔥 ${s.current}</span> بهترین: ${s.best}</div>`;
+                }
+            }
+
+            // Shop
+            const shop = await api('/shop');
+            if (shop) {
+                const el = document.getElementById('shopItems');
+                el.innerHTML = '';
+                shop.items.forEach(item => {
+                    const canBuy = shop.xp >= item.cost;
+                    el.innerHTML += `
+                        <div class="shop-item">
+                            <div class="item-info">
+                                <div class="item-name">${item.name}</div>
+                                <div class="item-cost">${item.cost} XP</div>
+                            </div>
+                            <button class="buy-btn" ${canBuy ? '' : 'disabled'} onclick="buyItem('${item.id}')">
+                                ${canBuy ? '🛒 خرید' : '🔒'}
+                            </button>
+                        </div>`;
+                });
+            }
+        }
+
+        async function buyItem(itemId) {
+            tg.HapticFeedback.impactOccurred('heavy');
+            const data = await api('/buy', 'POST', { item_id: itemId });
+            if (data && data.success) {
+                showToast('✅ خرید موفق!');
+                loadMore();
+                loadToday();
+            } else {
+                showToast('❌ XP کافی نیست!');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Initialize
+        // ═══════════════════════════════════════════════════════════════════
+
+        window.addEventListener('load', () => {
+            if (!userId) {
+                document.querySelector('.page.active').innerHTML =
+                    '<div class="empty-state">❌ لطفاً از طریق تلگرام باز کنید.</div>';
+                return;
+            }
+            loadToday();
+        });
+    </script>
+</body>
+</html>

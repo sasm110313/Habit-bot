@@ -65,6 +65,11 @@ cp db.py "$BOT_DIR/"
 cp gamification.py "$BOT_DIR/"
 cp handlers.py "$BOT_DIR/"
 cp reminders.py "$BOT_DIR/"
+cp api_server.py "$BOT_DIR/"
+
+# Copy webapp
+mkdir -p "$BOT_DIR/webapp"
+cp webapp/index.html "$BOT_DIR/webapp/" 2>/dev/null || true
 
 # ── 5. Create systemd service ────────────────────────────────────────────────
 echo "⚙️ ساخت/بروزرسانی سرویس..."
